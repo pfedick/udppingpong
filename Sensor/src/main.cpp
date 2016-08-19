@@ -6,7 +6,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "../include/sensordaemon.h"
+#include "sensordaemon.h"
 
 
 /*!\brief Stop-Flag

@@ -8,7 +8,7 @@
 #include <sys/sysinfo.h>
 #include <limits.h>
 
-#include "../include/sensordaemon.h"
+#include "sensordaemon.h"
 #include <dnsperftest_sensor.h>
 
 SensorClient::SensorClient(SensorDaemon *main, ppl7::TCPSocket *socket, ppl7::Logger *log, const ppl7::String &host, int port)
@@ -35,7 +35,6 @@ void SensorClient::run()
 {
 	threadDeleteOnExit(1);
 	Log->print(ppl7::Logger::DEBUG,1,__FILE__,__LINE__,ppl7::ToString("Thread started for client: %s:%u",(const char*)RemoteHost,RemotePort));
-	ppl7::SocketMessage msg;
 	msg.enableCompression(true);
 	while (1) {
 		if (threadShouldStop()) {
@@ -61,7 +60,38 @@ void SensorClient::run()
 	Log->print(ppl7::Logger::DEBUG,4,__FILE__,__LINE__,ppl7::ToString("Thread ended for client: %s:%u",(const char*)RemoteHost,RemotePort));
 }
 
+void SensorClient::answerFailed(const ppl7::String &error, const ppl7::AssocArray &payload)
+{
+	ppl7::AssocArray res(payload);
+	res.set("result","failed");
+	res.set("error",error);
+	msg.setPayload(res);
+	Socket->write(msg);
+}
+
+void SensorClient::answerOk(const ppl7::AssocArray &payload)
+{
+	ppl7::AssocArray res(payload);
+	res.set("result","ok");
+	msg.setPayload(res);
+	Socket->write(msg);
+}
+
+
 void SensorClient::dispatchMessage(const ppl7::AssocArray &msg)
 {
+	const ppl7::String &command=msg.get("command");
+	if (command=="ping") {
+		cmdPing(msg);
+	} else {
+		answerFailed(ppl7::ToString("unknown command: ")+command);
+	}
+}
 
+void SensorClient::cmdPing(const ppl7::AssocArray &msg)
+{
+	ppl7::AssocArray answer;
+	answer.setf("mytime","%lu", ppl7::GetTime());
+	answer.set("yourtime",msg.get("mytime"));
+	answerOk(answer);
 }

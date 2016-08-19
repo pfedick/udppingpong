@@ -37,12 +37,18 @@ class SensorClient : public ppl7::Thread
 		ppl7::String	RemoteHost;
 		int				RemotePort;
 		ppluint64		LastActivity;
+		ppl7::SocketMessage msg;
+
+		void answerFailed(const ppl7::String &error, const ppl7::AssocArray &payload = ppl7::AssocArray());
+		void answerOk(const ppl7::AssocArray &payload = ppl7::AssocArray());
 
 	public:
 		SensorClient(SensorDaemon *main, ppl7::TCPSocket *socket, ppl7::Logger *log, const ppl7::String &host, int port);
 		~SensorClient();
 		virtual void run();
 		void dispatchMessage(const ppl7::AssocArray &msg);
+
+		void cmdPing(const ppl7::AssocArray &msg);
 
 };
 

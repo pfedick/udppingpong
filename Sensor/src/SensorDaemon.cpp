@@ -8,7 +8,7 @@
 #include <sys/sysinfo.h>
 #include <limits.h>
 
-#include "../include/sensordaemon.h"
+#include "sensordaemon.h"
 #include <dnsperftest_sensor.h>
 
 
