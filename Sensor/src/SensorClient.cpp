@@ -85,6 +85,12 @@ void SensorClient::dispatchMessage(const ppl7::AssocArray &msg)
 		cmdPing(msg);
 	} else if (command=="proxyto") {
 		cmdProxyTo(msg);
+	} else if (command=="startsensor") {
+		cmdStartSensor();
+	} else if (command=="stopsensor") {
+		cmdStopSensor();
+	} else if (command=="getsensordata") {
+		cmdGetSensorData();
 	} else {
 		answerFailed(ppl7::ToString("unknown command: ")+command);
 	}
@@ -164,3 +170,25 @@ void SensorClient::cmdProxyTo(const ppl7::AssocArray &msg)
 
 }
 
+void SensorClient::cmdStartSensor()
+{
+	Main->startSensor();
+	answerOk();
+}
+
+void SensorClient::cmdStopSensor()
+{
+	Main->stopSensor();
+	answerOk();
+}
+
+void SensorClient::cmdGetSensorData()
+{
+	std::list<SystemStat> data;
+	std::list<SystemStat>::const_iterator it;
+	Main->getSensorData(data);
+	ppl7::AssocArray answer;
+	printf ("we have %zd entries in sensor-data\n",data.size());
+
+	answerOk();
+}

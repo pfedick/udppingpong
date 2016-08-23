@@ -8,6 +8,21 @@
 #ifndef INCLUDE_SENSORDAEMON_H_
 #define INCLUDE_SENSORDAEMON_H_
 
+#include <dnsperftest_sensor.h>
+
+class SensorThread : public ppl7::Thread
+{
+	private:
+		ppl7::Mutex				mutex;
+		std::list<SystemStat>	samples;
+
+	public:
+		SensorThread();
+		~SensorThread();
+		virtual void run();
+		void getSensorData(std::list<SystemStat> &data);
+};
+
 
 class SensorDaemon : private ppl7::TCPSocket, private ppl7::Signal
 {
@@ -15,6 +30,7 @@ class SensorDaemon : private ppl7::TCPSocket, private ppl7::Signal
 		void help();
 		ppl7::Logger		Log;
 		ppl7::ThreadPool	Clients;
+		SensorThread		Sensor;
 
 	public:
 		SensorDaemon();
@@ -24,6 +40,10 @@ class SensorDaemon : private ppl7::TCPSocket, private ppl7::Signal
 
 		virtual int receiveConnect(ppl7::TCPSocket *socket, const ppl7::String &host, int port);
 		virtual void signalHandler(ppl7::Signal::SignalType sig);
+
+		void startSensor();
+		void stopSensor();
+		void getSensorData(std::list<SystemStat> &data);
 
 };
 
@@ -50,8 +70,11 @@ class SensorClient : public ppl7::Thread
 
 		void cmdPing(const ppl7::AssocArray &msg);
 		void cmdProxyTo(const ppl7::AssocArray &msg);
-
+		void cmdStartSensor();
+		void cmdStopSensor();
+		void cmdGetSensorData();
 };
+
 
 
 

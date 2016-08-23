@@ -69,16 +69,16 @@ bool Communicator::ping()
 
 bool Communicator::talk(const ppl7::AssocArray &msg, ppl7::AssocArray &answer, ppl7::Thread *watch_thread)
 {
-	printf ("Send:\n");
-	msg.list();
+	//printf ("Send:\n");
+	//msg.list();
 	Msg.setPayload(msg);
 	ppl7::TCPSocket::write(Msg);
 	if (!ppl7::TCPSocket::waitForMessage(Msg,timeout_read_sec,watch_thread)) {
 		return false;
 	}
 	Msg.getPayload(answer);
-	printf ("Answer:\n");
-	answer.list();
+	//printf ("Answer:\n");
+	//answer.list();
 	return true;
 }
 
@@ -101,4 +101,51 @@ void Communicator::proxyTo(const ppl7::String &Hostname, int Port)
 		ppl7::TCPSocket::disconnect();
 		throw;
 	}
+}
+
+
+void Communicator::startSensor()
+{
+	ppl7::AssocArray msg, answer;
+	msg.set("command","startsensor");
+	try {
+		if (!talk(msg, answer)) {
+			ppl7::TCPSocket::disconnect();
+			throw ppl7::OperationFailedException("startSensor");
+		}
+	} catch (...) {
+		ppl7::TCPSocket::disconnect();
+		throw;
+	}
+}
+
+void Communicator::stopSensor()
+{
+	ppl7::AssocArray msg, answer;
+	msg.set("command","stopsensor");
+	try {
+		if (!talk(msg, answer)) {
+			ppl7::TCPSocket::disconnect();
+			throw ppl7::OperationFailedException("stopSensor");
+		}
+	} catch (...) {
+		ppl7::TCPSocket::disconnect();
+		throw;
+	}
+}
+
+void Communicator::getSensorData(std::list<SystemStat> &data)
+{
+	ppl7::AssocArray msg, answer;
+	msg.set("command","getsensordata");
+	try {
+		if (!talk(msg, answer)) {
+			ppl7::TCPSocket::disconnect();
+			throw ppl7::OperationFailedException("stopSensor");
+		}
+	} catch (...) {
+		ppl7::TCPSocket::disconnect();
+		throw;
+	}
+	answer.list();
 }

@@ -5,8 +5,9 @@
 #include <signal.h>
 #include <time.h>
 #include <unistd.h>
-
+#include <list>
 #include <dnsperftest_communicator.h>
+#include <dnsperftest_sensor.h>
 
 
 static void help()
@@ -24,9 +25,13 @@ int main(int argc, char**argv)
 	printf ("ping\n");
 	comm.ping();
 	printf ("ping done\n");
-	sleep(2);
+	comm.startSensor();
+	sleep(3);
 	printf ("next ping\n");
 	comm.ping();
 	printf ("ping done\n");
+	comm.stopSensor();
+	std::list<SystemStat> data;
+	comm.getSensorData(data);
 	return 0;
 }

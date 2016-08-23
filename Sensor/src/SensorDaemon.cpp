@@ -119,3 +119,23 @@ void SensorDaemon::removeClient(ppl7::Thread *thread)
 {
 	Clients.removeThread(thread);
 }
+
+
+void SensorDaemon::startSensor()
+{
+	if (!Sensor.threadIsRunning()) {
+		Sensor.threadStart();
+	}
+}
+
+void SensorDaemon::stopSensor()
+{
+	printf ("SensorDaemon::stopSensor\n");
+	Sensor.threadStop();
+	printf ("SensorDaemon::stopSensor => done\n");
+}
+
+void SensorDaemon::getSensorData(std::list<SystemStat> &data)
+{
+	Sensor.getSensorData(data);
+}
