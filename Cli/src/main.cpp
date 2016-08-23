@@ -19,6 +19,14 @@ int main(int argc, char**argv)
 	Communicator comm;
 	comm.connect("patrickf-xm2.office.denic.de",40000);
 	comm.ping();
-
+	printf ("proxy aktivieren\n");
+	comm.proxyTo("patrickf-xm2.office.denic.de",40000);
+	printf ("ping\n");
+	comm.ping();
+	printf ("ping done\n");
+	sleep(2);
+	printf ("next ping\n");
+	comm.ping();
+	printf ("ping done\n");
 	return 0;
 }

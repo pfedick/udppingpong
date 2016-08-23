@@ -1,5 +1,8 @@
 #ifndef INCLUDE_DNSPERFTEST_COMMUNICATOR_H_
 #define INCLUDE_DNSPERFTEST_COMMUNICATOR_H_
+#include <list>
+
+class SystemStat;
 
 class Communicator : private ppl7::TCPSocket
 {
@@ -7,8 +10,10 @@ class Communicator : private ppl7::TCPSocket
 		ppluint64		lastuse;
 		ppluint64		lastping;
 		double			pingtime;
-		int				timeout;
 		ppl7::SocketMessage	Msg;
+
+		int timeout_connect_sec, timeout_connect_usec;
+		int timeout_read_sec, timeout_read_usec;
 
 	public:
 		Communicator();
@@ -18,9 +23,16 @@ class Communicator : private ppl7::TCPSocket
 		void disconnect();
 		bool ping();
 
+		void proxyTo(const ppl7::String &Hostname, int Port);
+
 		void setConnectTimeout(int sec, int usec);
 		void setReadTimeout(int sec, int usec);
 		bool talk(const ppl7::AssocArray &msg, ppl7::AssocArray &answer, ppl7::Thread *watch_thread=NULL);
+
+		void startSensor();
+		void stopSensor();
+		void getSensorData(std::list<SystemStat> &data);
+
 
 };
 

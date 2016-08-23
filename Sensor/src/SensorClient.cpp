@@ -83,6 +83,8 @@ void SensorClient::dispatchMessage(const ppl7::AssocArray &msg)
 	const ppl7::String &command=msg.get("command");
 	if (command=="ping") {
 		cmdPing(msg);
+	} else if (command=="proxyto") {
+		cmdProxyTo(msg);
 	} else {
 		answerFailed(ppl7::ToString("unknown command: ")+command);
 	}
@@ -95,3 +97,70 @@ void SensorClient::cmdPing(const ppl7::AssocArray &msg)
 	answer.set("yourtime",msg.get("mytime"));
 	answerOk(answer);
 }
+
+void SensorClient::cmdProxyTo(const ppl7::AssocArray &msg)
+{
+	ppl7::String Host=msg.getString("host");
+	int Port=msg.getString("port").toInt();
+	int timeout_connect_sec=msg.getString("timeout_connect_sec").toInt();
+	int timeout_connect_usec=msg.getString("timeout_connect_usec").toInt();
+	int timeout_read_sec=msg.getString("timeout_read_sec").toInt();
+	int timeout_read_usec=msg.getString("timeout_read_usec").toInt();
+	if (Host.isEmpty()) {
+		answerFailed("parameter missing [host]");
+		return;
+	}
+	if (!Port) {
+		answerFailed("parameter missing [port]");
+		return;
+	}
+	char *buffer=(char*)malloc(65536);
+	if (!buffer) {
+		answerFailed("out of memory");
+		return;
+	}
+	ppl7::TCPSocket proxy;
+	proxy.setTimeoutConnect(timeout_connect_sec,timeout_connect_usec);
+	try {
+		proxy.connect(Host, Port);
+		proxy.setTimeoutRead(timeout_read_sec,timeout_read_usec);
+		proxy.setTimeoutWrite(timeout_read_sec,timeout_read_usec);
+		proxy.setBlocking(false);
+	} catch (const ppl7::Exception &ex) {
+		free(buffer);
+		answerFailed(ex.toString());
+		return;
+	} catch (...) {
+		free(buffer);
+		answerFailed("unhandled exception occured");
+		return;
+	}
+	answerOk();
+	Log->print(ppl7::Logger::DEBUG,1,__FILE__,__LINE__,ppl7::ToString("Proxy startet for client: %s:%u to %s:%u",
+			(const char*)RemoteHost,RemotePort,
+			(const char*)Host, Port));
+	Socket->setBlocking(false);
+	try {
+		while(!threadShouldStop()) {
+			while (Socket->waitForIncomingData(0,100000)) {
+				size_t bytes=Socket->read(buffer,65536);
+				proxy.write(buffer,bytes);
+			}
+			while (proxy.waitForIncomingData(0,100000)) {
+				size_t bytes=proxy.read(buffer,65536);
+				Socket->write(buffer,bytes);
+			}
+
+		}
+	} catch (...) {
+
+	}
+	proxy.disconnect();
+	free(buffer);
+	threadShouldStop();
+	Log->print(ppl7::Logger::DEBUG,1,__FILE__,__LINE__,ppl7::ToString("Proxy stopped for client: %s:%u to %s:%u",
+			(const char*)RemoteHost,RemotePort,
+			(const char*)Host, Port));
+
+}
+

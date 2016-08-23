@@ -49,6 +49,7 @@ class SensorClient : public ppl7::Thread
 		void dispatchMessage(const ppl7::AssocArray &msg);
 
 		void cmdPing(const ppl7::AssocArray &msg);
+		void cmdProxyTo(const ppl7::AssocArray &msg);
 
 };
 
