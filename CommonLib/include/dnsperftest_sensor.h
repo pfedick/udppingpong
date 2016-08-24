@@ -80,6 +80,10 @@ class SystemStat
 		Network net_receive;
 		Network net_transmit;
 
+		void exportToArray(ppl7::AssocArray &data) const;
+		void importFromArray(const ppl7::AssocArray &data);
+		void print() const;
+
 };
 
 void sampleSensorData(SystemStat &stat);

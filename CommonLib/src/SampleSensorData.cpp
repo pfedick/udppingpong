@@ -91,3 +91,69 @@ SystemStat::Network SystemStat::Network::getDelta(const SystemStat::Network &sam
 			delta_with_overflow(sample1.errs, sample2.errs),
 			delta_with_overflow(sample1.drop, sample2.drop));
 }
+
+
+void SystemStat::exportToArray(ppl7::AssocArray &data) const
+{
+	data.setf("sampleTime","%0.6f",sampleTime);
+	data.setf("net_receive/bytes","%lu",net_receive.bytes);
+	data.setf("net_receive/packets","%lu",net_receive.packets);
+	data.setf("net_receive/errs","%lu",net_receive.errs);
+	data.setf("net_receive/drop","%lu",net_receive.drop);
+	data.setf("net_transmit/bytes","%lu",net_transmit.bytes);
+	data.setf("net_transmit/packets","%lu",net_transmit.packets);
+	data.setf("net_transmit/errs","%lu",net_transmit.errs);
+	data.setf("net_transmit/drop","%lu",net_transmit.drop);
+
+	data.setf("cpu/user","%d",cpu.user);
+	data.setf("cpu/nice","%d",cpu.nice);
+	data.setf("cpu/system","%d",cpu.system);
+	data.setf("cpu/idle","%d",cpu.idle);
+	data.setf("cpu/iowait","%d",cpu.iowait);
+
+	data.setf("sysinfo/uptime","%ld",sysinfo.uptime);
+	data.setf("sysinfo/freeswap","%ld",sysinfo.freeswap);
+	data.setf("sysinfo/totalswap","%ld",sysinfo.totalswap);
+	data.setf("sysinfo/freeram","%ld",sysinfo.freeram);
+	data.setf("sysinfo/bufferram","%ld",sysinfo.bufferram);
+	data.setf("sysinfo/totalram","%ld",sysinfo.totalram);
+	data.setf("sysinfo/sharedram","%ld",sysinfo.sharedram);
+	data.setf("sysinfo/procs","%d",sysinfo.procs);
+}
+
+void SystemStat::importFromArray(const ppl7::AssocArray &data)
+{
+	sampleTime=data.getString("sampleTime").toDouble();
+	net_receive.bytes=data.getString("net_receive/bytes").toUnsignedLong();
+	net_receive.packets=data.getString("net_receive/packets").toUnsignedLong();
+	net_receive.errs=data.getString("net_receive/errs").toUnsignedLong();
+	net_receive.drop=data.getString("net_receive/drop").toUnsignedLong();
+	net_transmit.bytes=data.getString("net_transmit/bytes").toUnsignedLong();
+	net_transmit.packets=data.getString("net_transmit/packets").toUnsignedLong();
+	net_transmit.errs=data.getString("net_transmit/errs").toUnsignedLong();
+	net_transmit.drop=data.getString("net_transmit/drop").toUnsignedLong();
+
+	cpu.user=data.getString("cpu/user").toInt();
+	cpu.nice=data.getString("cpu/nice").toInt();
+	cpu.system=data.getString("cpu/system").toInt();
+	cpu.idle=data.getString("cpu/idle").toInt();
+	cpu.iowait=data.getString("cpu/iowait").toInt();
+
+	sysinfo.uptime=data.getString("sysinfo/uptime").toLong();
+	sysinfo.freeswap=data.getString("sysinfo/freeswap").toLong();
+	sysinfo.totalswap=data.getString("sysinfo/totalswap").toLong();
+	sysinfo.freeram=data.getString("sysinfo/freeram").toLong();
+	sysinfo.bufferram=data.getString("sysinfo/bufferram").toLong();
+	sysinfo.totalram=data.getString("sysinfo/totalram").toLong();
+	sysinfo.sharedram=data.getString("sysinfo/sharedram").toLong();
+	sysinfo.procs=data.getString("sysinfo/procs").toInt();
+}
+
+void SystemStat::print() const
+{
+	ppl7::AssocArray a;
+	exportToArray(a);
+	a.list();
+}
+
+

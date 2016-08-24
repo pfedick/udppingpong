@@ -33,5 +33,12 @@ int main(int argc, char**argv)
 	comm.stopSensor();
 	std::list<SystemStat> data;
 	comm.getSensorData(data);
+	printf ("Wir haben %zd Datensaetze\n",data.size());
+	std::list<SystemStat>::const_iterator it;
+	for (it=data.begin();it!=data.end();++it) {
+		printf ("====================================================\n");
+		(*it).print();
+	}
+
 	return 0;
 }

@@ -188,7 +188,11 @@ void SensorClient::cmdGetSensorData()
 	std::list<SystemStat>::const_iterator it;
 	Main->getSensorData(data);
 	ppl7::AssocArray answer;
-	printf ("we have %zd entries in sensor-data\n",data.size());
-
-	answerOk();
+	ppl7::AssocArray row;
+	for (it=data.begin();it!=data.end();++it) {
+		(*it).exportToArray(row);
+		answer.set("data/[]",row);
+	}
+	//answer.list();
+	answerOk(answer);
 }

@@ -125,14 +125,14 @@ void SensorDaemon::startSensor()
 {
 	if (!Sensor.threadIsRunning()) {
 		Sensor.threadStart();
+		Log.print(ppl7::Logger::DEBUG,3,__FILE__,__LINE__,"SensorThread started");
 	}
 }
 
 void SensorDaemon::stopSensor()
 {
-	printf ("SensorDaemon::stopSensor\n");
 	Sensor.threadStop();
-	printf ("SensorDaemon::stopSensor => done\n");
+	Log.print(ppl7::Logger::DEBUG,3,__FILE__,__LINE__,"SensorThread stopped");
 }
 
 void SensorDaemon::getSensorData(std::list<SystemStat> &data)

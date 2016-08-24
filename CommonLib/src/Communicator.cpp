@@ -2,6 +2,7 @@
 #include <ppl7-inet.h>
 
 #include "dnsperftest_communicator.h"
+#include "dnsperftest_sensor.h"
 
 Communicator::Communicator()
 {
@@ -137,6 +138,7 @@ void Communicator::stopSensor()
 void Communicator::getSensorData(std::list<SystemStat> &data)
 {
 	ppl7::AssocArray msg, answer;
+	data.clear();
 	msg.set("command","getsensordata");
 	try {
 		if (!talk(msg, answer)) {
@@ -147,5 +149,13 @@ void Communicator::getSensorData(std::list<SystemStat> &data)
 		ppl7::TCPSocket::disconnect();
 		throw;
 	}
-	answer.list();
+	const ppl7::AssocArray row;
+	const ppl7::AssocArray &d=answer.getArray("data");
+	ppl7::AssocArray::Iterator it;
+	d.reset(it);
+	while (d.getNext(it, ppl7::Variant::TYPE_ASSOCARRAY)) {
+		SystemStat s;
+		s.importFromArray(it.value().toAssocArray());
+		data.push_back(s);
+	}
 }
