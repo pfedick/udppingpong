@@ -33,6 +33,7 @@ static void sampleSysinfo(SystemStat::Sysinfo &stat)
     stat.totalram=info.totalram*info.mem_unit;
     stat.totalswap=info.totalswap*info.mem_unit;
     stat.sharedram=info.sharedram*info.mem_unit;
+    stat.procs=info.procs;
 }
 
 static void sampleNetwork(SystemStat::Network &receive, SystemStat::Network &transmit)
