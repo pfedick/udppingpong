@@ -8,6 +8,10 @@
 #ifndef INCLUDE_SENSORDAEMON_H_
 #define INCLUDE_SENSORDAEMON_H_
 
+#include <list>
+#include <ppl7.h>
+#include <ppl7-inet.h>
+
 #include <dnsperftest_sensor.h>
 
 class SensorThread : public ppl7::Thread
@@ -23,6 +27,21 @@ class SensorThread : public ppl7::Thread
 		void getSensorData(std::list<SystemStat> &data);
 };
 
+class Config
+{
+	private:
+	public:
+		Config();
+		void loadFromFile(const ppl7::String &Filename);
+
+		ppl7::String 	InterfaceName;
+		int 			InterfacePort;
+
+		ppl7::String 	UDPEchoInterfaceName;
+		int				UDPEchoInterfacePort;
+
+};
+
 
 class SensorDaemon : private ppl7::TCPSocket, private ppl7::Signal
 {
@@ -31,6 +50,7 @@ class SensorDaemon : private ppl7::TCPSocket, private ppl7::Signal
 		ppl7::Logger		Log;
 		ppl7::ThreadPool	Clients;
 		SensorThread		Sensor;
+		Config				conf;
 
 	public:
 		SensorDaemon();

@@ -33,21 +33,33 @@ void SensorDaemon::help()
 
 int SensorDaemon::main(int argc, char **argv)
 {
-	ppl7::String host=ppl7::GetArgv(argc,argv,"-b");
-	int port=ppl7::GetArgv(argc,argv,"-p").toInt();
-	if (host.isEmpty() || port==0) {
+	try {
+		if (ppl7::HaveArgv(argc,argv,"-c")) {
+			conf.loadFromFile(ppl7::GetArgv(argc,argv,"-c"));
+		} else {
+			if (ppl7::File::exists("dnsperftest.conf")) conf.loadFromFile("dnsperftest.conf");
+			else {
+				printf ("ERROR: no configuration file found\n");
+				help();
+				return 1;
+			}
+		}
+	} catch (const ppl7::Exception &ex) {
+		printf ("ERROR: Could not load configuration file\n");
+		ex.print();
 		help();
 		return 1;
 	}
+
 	catchSignal(ppl7::Signal::Signal_SIGINT);
 	catchSignal(ppl7::Signal::Signal_SIGHUP);
 	catchSignal(ppl7::Signal::Signal_SIGTERM);
 	catchSignal(ppl7::Signal::Signal_SIGPIPE);
 
 
-	Log.print(ppl7::Logger::INFO,1,__FILE__,__LINE__,ppl7::ToString("Starting, Listen on: %s:%u",(const char*)host,port));
+	Log.print(ppl7::Logger::INFO,1,__FILE__,__LINE__,ppl7::ToString("Starting, Listen on: %s:%u",(const char*)conf.InterfaceName,conf.InterfacePort));
 	try {
-		bind(host,port);
+		bind(conf.InterfaceName,conf.InterfacePort);
 		listen();
 	} catch (const ppl7::Exception &e) {
 		Log.printException(__FILE__,__LINE__,e);
@@ -56,22 +68,8 @@ int SensorDaemon::main(int argc, char **argv)
 	}
 	Clients.signalStopThreads();
 	Clients.stopThreads();
+	Sensor.threadStop();
 	Log.print(ppl7::Logger::INFO,1,__FILE__,__LINE__,"Terminating normal");
-	return 0;
-
-
-	SystemStat sample1, sample2;
-	sampleSensorData(sample1);
-	for(;;)
-	{
-		sleep(1);
-		sampleSensorData(sample2);
-		printf("The current CPU utilization is : %f %%, FreeMemory: %ld\n",SystemStat::Cpu::getUsage(sample1.cpu,sample2.cpu),sample2.sysinfo.freeram/1024);
-		SystemStat::Network::getDelta(sample1.net_receive, sample2.net_receive).print();
-		SystemStat::Network::getDelta(sample1.net_transmit, sample2.net_transmit).print();
-
-		sample1=sample2;
-	}
 	return 0;
 }
 

@@ -1,0 +1,7 @@
+[interface]
+Host=localhost
+Port=50000
+
+[udpecho]
+Host=localhost
+Port=50001

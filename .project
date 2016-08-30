@@ -3,6 +3,7 @@
 	<name>DNSPerfTest</name>
 	<comment></comment>
 	<projects>
+		<project>PPL7 - SVN</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>
