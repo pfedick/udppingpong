@@ -8,8 +8,8 @@
 #include <sys/sysinfo.h>
 #include <limits.h>
 
-#include "sensordaemon.h"
 #include <dnsperftest_sensor.h>
+#include "../include/dnsperftest_agent.h"
 
 
 SensorThread::SensorThread()

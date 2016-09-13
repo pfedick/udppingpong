@@ -1,12 +1,5 @@
-/*
- * dnsperftest_sensor.h
- *
- *  Created on: 21.07.2016
- *      Author: patrickf
- */
-
-#ifndef INCLUDE_SENSORDAEMON_H_
-#define INCLUDE_SENSORDAEMON_H_
+#ifndef INCLUDE_DNSPERFTEST_AGENT_H_
+#define INCLUDE_DNSPERFTEST_AGENT_H_
 
 #include <list>
 #include <ppl7.h>
@@ -43,7 +36,7 @@ class Config
 };
 
 
-class SensorDaemon : private ppl7::TCPSocket, private ppl7::Signal
+class AgentDaemon : private ppl7::TCPSocket, private ppl7::Signal
 {
 	private:
 		void help();
@@ -53,8 +46,8 @@ class SensorDaemon : private ppl7::TCPSocket, private ppl7::Signal
 		Config				conf;
 
 	public:
-		SensorDaemon();
-		~SensorDaemon();
+		AgentDaemon();
+		~AgentDaemon();
 		int main(int argc, char **argv);
 		void removeClient(ppl7::Thread *thread);
 
@@ -67,11 +60,11 @@ class SensorDaemon : private ppl7::TCPSocket, private ppl7::Signal
 
 };
 
-class SensorClient : public ppl7::Thread
+class AgentClient : public ppl7::Thread
 {
 	private:
 		ppl7::Mutex		Mutex;
-		SensorDaemon	*Main;
+		AgentDaemon	*Main;
 		ppl7::TCPSocket	*Socket;
 		ppl7::Logger	*Log;
 		ppl7::String	RemoteHost;
@@ -83,8 +76,8 @@ class SensorClient : public ppl7::Thread
 		void answerOk(const ppl7::AssocArray &payload = ppl7::AssocArray());
 
 	public:
-		SensorClient(SensorDaemon *main, ppl7::TCPSocket *socket, ppl7::Logger *log, const ppl7::String &host, int port);
-		~SensorClient();
+		AgentClient(AgentDaemon *main, ppl7::TCPSocket *socket, ppl7::Logger *log, const ppl7::String &host, int port);
+		~AgentClient();
 		virtual void run();
 		void dispatchMessage(const ppl7::AssocArray &msg);
 
@@ -98,4 +91,4 @@ class SensorClient : public ppl7::Thread
 
 
 
-#endif /* INCLUDE_SENSORDAEMON_H_ */
+#endif /* INCLUDE_DNSPERFTEST_AGENT_H_ */

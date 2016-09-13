@@ -6,7 +6,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "sensordaemon.h"
+#include "../include/dnsperftest_agent.h"
 
 
 /*!\brief Stop-Flag
@@ -40,6 +40,6 @@ void sighandler(int sig)
  */
 int main(int argc, char**argv)
 {
-	SensorDaemon Daemon;
+	AgentDaemon Daemon;
 	return Daemon.main(argc,argv);
 }

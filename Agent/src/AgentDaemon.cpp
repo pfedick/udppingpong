@@ -8,11 +8,11 @@
 #include <sys/sysinfo.h>
 #include <limits.h>
 
-#include "sensordaemon.h"
 #include <dnsperftest_sensor.h>
+#include "../include/dnsperftest_agent.h"
 
 
-SensorDaemon::SensorDaemon()
+AgentDaemon::AgentDaemon()
 {
 	Log.openSyslog("DNSPerfTestSensor");
 	Log.setLogLevel(ppl7::Logger::ERR,10);
@@ -21,17 +21,17 @@ SensorDaemon::SensorDaemon()
 	Log.setLogLevel(ppl7::Logger::DEBUG,10);
 }
 
-SensorDaemon::~SensorDaemon()
+AgentDaemon::~AgentDaemon()
 {
 
 }
 
-void SensorDaemon::help()
+void AgentDaemon::help()
 {
 
 }
 
-int SensorDaemon::main(int argc, char **argv)
+int AgentDaemon::main(int argc, char **argv)
 {
 	try {
 		if (ppl7::HaveArgv(argc,argv,"-c")) {
@@ -73,7 +73,7 @@ int SensorDaemon::main(int argc, char **argv)
 	return 0;
 }
 
-void SensorDaemon::signalHandler(ppl7::Signal::SignalType sig)
+void AgentDaemon::signalHandler(ppl7::Signal::SignalType sig)
 {
 	switch (sig) {
 		case Signal_SIGINT:
@@ -94,11 +94,11 @@ void SensorDaemon::signalHandler(ppl7::Signal::SignalType sig)
 }
 
 
-int SensorDaemon::receiveConnect(ppl7::TCPSocket *socket, const ppl7::String &host, int port)
+int AgentDaemon::receiveConnect(ppl7::TCPSocket *socket, const ppl7::String &host, int port)
 {
 	Log.print(ppl7::Logger::INFO,1,__FILE__,__LINE__,ppl7::ToString("Connect from: %s:%u",(const char*)host,port));
 	try {
-		SensorClient *client=new SensorClient(this, socket, &Log, host, port);
+		AgentClient *client=new AgentClient(this, socket, &Log, host, port);
 		//size_t stack=client->threadGetMinimumStackSize();
 		//if (stack<1024*1204) stack=1024*1024;
 		//client->threadSetStackSize(stack);
@@ -113,13 +113,13 @@ int SensorDaemon::receiveConnect(ppl7::TCPSocket *socket, const ppl7::String &ho
 	return 0;
 }
 
-void SensorDaemon::removeClient(ppl7::Thread *thread)
+void AgentDaemon::removeClient(ppl7::Thread *thread)
 {
 	Clients.removeThread(thread);
 }
 
 
-void SensorDaemon::startSensor()
+void AgentDaemon::startSensor()
 {
 	if (!Sensor.threadIsRunning()) {
 		Sensor.threadStart();
@@ -127,13 +127,13 @@ void SensorDaemon::startSensor()
 	}
 }
 
-void SensorDaemon::stopSensor()
+void AgentDaemon::stopSensor()
 {
 	Sensor.threadStop();
 	Log.print(ppl7::Logger::DEBUG,3,__FILE__,__LINE__,"SensorThread stopped");
 }
 
-void SensorDaemon::getSensorData(std::list<SystemStat> &data)
+void AgentDaemon::getSensorData(std::list<SystemStat> &data)
 {
 	Sensor.getSensorData(data);
 }

@@ -1,7 +1,7 @@
 
 all:
 	cd CommonLib; make
-	cd Sensor; make
+	cd Agent; make
 	cd Cli; make
 	
 	

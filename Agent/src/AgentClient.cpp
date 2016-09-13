@@ -8,10 +8,10 @@
 #include <sys/sysinfo.h>
 #include <limits.h>
 
-#include "sensordaemon.h"
 #include <dnsperftest_sensor.h>
+#include "../include/dnsperftest_agent.h"
 
-SensorClient::SensorClient(SensorDaemon *main, ppl7::TCPSocket *socket, ppl7::Logger *log, const ppl7::String &host, int port)
+AgentClient::AgentClient(AgentDaemon *main, ppl7::TCPSocket *socket, ppl7::Logger *log, const ppl7::String &host, int port)
 {
 	this->Main=main;
 	this->Socket=socket;
@@ -22,7 +22,7 @@ SensorClient::SensorClient(SensorDaemon *main, ppl7::TCPSocket *socket, ppl7::Lo
 }
 
 
-SensorClient::~SensorClient()
+AgentClient::~AgentClient()
 {
 	if (Socket) delete Socket;
 	if (Log) {
@@ -31,7 +31,7 @@ SensorClient::~SensorClient()
 	if (Main) Main->removeClient(this);
 }
 
-void SensorClient::run()
+void AgentClient::run()
 {
 	threadDeleteOnExit(1);
 	Log->print(ppl7::Logger::DEBUG,1,__FILE__,__LINE__,ppl7::ToString("Thread started for client: %s:%u",(const char*)RemoteHost,RemotePort));
@@ -60,7 +60,7 @@ void SensorClient::run()
 	Log->print(ppl7::Logger::DEBUG,4,__FILE__,__LINE__,ppl7::ToString("Thread ended for client: %s:%u",(const char*)RemoteHost,RemotePort));
 }
 
-void SensorClient::answerFailed(const ppl7::String &error, const ppl7::AssocArray &payload)
+void AgentClient::answerFailed(const ppl7::String &error, const ppl7::AssocArray &payload)
 {
 	ppl7::AssocArray res(payload);
 	res.set("result","failed");
@@ -69,7 +69,7 @@ void SensorClient::answerFailed(const ppl7::String &error, const ppl7::AssocArra
 	Socket->write(msg);
 }
 
-void SensorClient::answerOk(const ppl7::AssocArray &payload)
+void AgentClient::answerOk(const ppl7::AssocArray &payload)
 {
 	ppl7::AssocArray res(payload);
 	res.set("result","ok");
@@ -78,7 +78,7 @@ void SensorClient::answerOk(const ppl7::AssocArray &payload)
 }
 
 
-void SensorClient::dispatchMessage(const ppl7::AssocArray &msg)
+void AgentClient::dispatchMessage(const ppl7::AssocArray &msg)
 {
 	const ppl7::String &command=msg.get("command");
 	if (command=="ping") {
@@ -96,7 +96,7 @@ void SensorClient::dispatchMessage(const ppl7::AssocArray &msg)
 	}
 }
 
-void SensorClient::cmdPing(const ppl7::AssocArray &msg)
+void AgentClient::cmdPing(const ppl7::AssocArray &msg)
 {
 	ppl7::AssocArray answer;
 	answer.setf("mytime","%lu", ppl7::GetTime());
@@ -104,7 +104,7 @@ void SensorClient::cmdPing(const ppl7::AssocArray &msg)
 	answerOk(answer);
 }
 
-void SensorClient::cmdProxyTo(const ppl7::AssocArray &msg)
+void AgentClient::cmdProxyTo(const ppl7::AssocArray &msg)
 {
 	ppl7::String Host=msg.getString("host");
 	int Port=msg.getString("port").toInt();
@@ -170,19 +170,19 @@ void SensorClient::cmdProxyTo(const ppl7::AssocArray &msg)
 
 }
 
-void SensorClient::cmdStartSensor()
+void AgentClient::cmdStartSensor()
 {
 	Main->startSensor();
 	answerOk();
 }
 
-void SensorClient::cmdStopSensor()
+void AgentClient::cmdStopSensor()
 {
 	Main->stopSensor();
 	answerOk();
 }
 
-void SensorClient::cmdGetSensorData()
+void AgentClient::cmdGetSensorData()
 {
 	std::list<SystemStat> data;
 	std::list<SystemStat>::const_iterator it;

@@ -1,5 +1,6 @@
 #include <ppl7.h>
-#include "sensordaemon.h"
+
+#include "../include/dnsperftest_agent.h"
 
 Config::Config()
 {
