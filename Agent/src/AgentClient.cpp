@@ -91,6 +91,12 @@ void AgentClient::dispatchMessage(const ppl7::AssocArray &msg)
 		cmdStopSensor();
 	} else if (command=="getsensordata") {
 		cmdGetSensorData();
+	} else if (command=="startudpechoserver") {
+		cmdStartUDPEchoServer(msg);
+	} else if (command=="stopudpechoserver") {
+		cmdStopUDPEchoServer();
+	} else if (command=="getudpechoserverdata") {
+		cmdGetUDPEchoServerData();
 	} else {
 		answerFailed(ppl7::ToString("unknown command: ")+command);
 	}
@@ -195,4 +201,44 @@ void AgentClient::cmdGetSensorData()
 	}
 	//answer.list();
 	answerOk(answer);
+}
+
+void AgentClient::cmdStartUDPEchoServer(const ppl7::AssocArray &params)
+{
+	ppl7::String InterfaceName=params.getString("interface");
+	int port=params.getString("port").toInt();
+	size_t packet_size = params.getString("packetsize").toInt();
+	size_t num_threads = params.getString("threads").toInt();
+	bool disable_responses = params.getString("disable_responses").toBool();
+
+	if (InterfaceName.isEmpty()) {
+		answerFailed("parameter missing [interface]");
+		return;
+	}
+	if (!port) {
+		answerFailed("parameter missing [port]");
+		return;
+	}
+	if (!num_threads) num_threads=1;
+	try {
+		Main->startUDPEchoServer(InterfaceName, port, packet_size, num_threads, disable_responses);
+	} catch (const ppl7::Exception &ex) {
+		answerFailed(ex.toString());
+		return;
+	} catch (...) {
+		answerFailed("unhandled exception occured");
+		return;
+	}
+	answerOk();
+}
+
+void AgentClient::cmdStopUDPEchoServer()
+{
+	Main->stopUDPEchoServer();
+	answerOk();
+}
+
+void AgentClient::cmdGetUDPEchoServerData()
+{
+
 }

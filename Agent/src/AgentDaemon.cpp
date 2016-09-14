@@ -10,6 +10,7 @@
 
 #include <dnsperftest_sensor.h>
 #include "../include/dnsperftest_agent.h"
+#include "../include/udpecho.h"
 
 
 AgentDaemon::AgentDaemon()
@@ -19,11 +20,12 @@ AgentDaemon::AgentDaemon()
 	Log.setLogLevel(ppl7::Logger::CRIT,10);
 	Log.setLogLevel(ppl7::Logger::INFO,10);
 	Log.setLogLevel(ppl7::Logger::DEBUG,10);
+	UDPEchoServer=new UDPEchoBouncer();
 }
 
 AgentDaemon::~AgentDaemon()
 {
-
+	delete UDPEchoServer;
 }
 
 void AgentDaemon::help()
@@ -136,4 +138,23 @@ void AgentDaemon::stopSensor()
 void AgentDaemon::getSensorData(std::list<SystemStat> &data)
 {
 	Sensor.getSensorData(data);
+}
+
+void AgentDaemon::startUDPEchoServer(const ppl7::String &InterfaceName, int Port, size_t PacketSize, size_t num_threads, bool disable_responses)
+{
+	stopUDPEchoServer();
+	UDPEchoServer->setFixedResponsePacketSize(PacketSize);
+	UDPEchoServer->disableResponses(disable_responses);
+	UDPEchoServer->setInterface(InterfaceName, Port);
+	UDPEchoServer->start(num_threads);
+}
+
+void AgentDaemon::stopUDPEchoServer()
+{
+	UDPEchoServer->stop();
+}
+
+void AgentDaemon::getUDPEchoServerData()
+{
+
 }

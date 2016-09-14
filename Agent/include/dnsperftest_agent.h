@@ -6,6 +6,7 @@
 #include <ppl7-inet.h>
 
 #include <dnsperftest_sensor.h>
+class UDPEchoBouncer;
 
 class SensorThread : public ppl7::Thread
 {
@@ -44,6 +45,8 @@ class AgentDaemon : private ppl7::TCPSocket, private ppl7::Signal
 		ppl7::ThreadPool	Clients;
 		SensorThread		Sensor;
 		Config				conf;
+		UDPEchoBouncer		*UDPEchoServer;
+
 
 	public:
 		AgentDaemon();
@@ -57,6 +60,11 @@ class AgentDaemon : private ppl7::TCPSocket, private ppl7::Signal
 		void startSensor();
 		void stopSensor();
 		void getSensorData(std::list<SystemStat> &data);
+
+
+		void startUDPEchoServer(const ppl7::String &InterfaceName, int Port, size_t PacketSize, size_t num_threads, bool disable_responses);
+		void stopUDPEchoServer();
+		void getUDPEchoServerData();
 
 };
 
@@ -86,6 +94,9 @@ class AgentClient : public ppl7::Thread
 		void cmdStartSensor();
 		void cmdStopSensor();
 		void cmdGetSensorData();
+		void cmdStartUDPEchoServer(const ppl7::AssocArray &params);
+		void cmdStopUDPEchoServer();
+		void cmdGetUDPEchoServerData();
 };
 
 
