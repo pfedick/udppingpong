@@ -62,7 +62,7 @@ class AgentDaemon : private ppl7::TCPSocket, private ppl7::Signal
 		void getSensorData(std::list<SystemStat> &data);
 
 
-		void startUDPEchoServer(const ppl7::String &InterfaceName, int Port, size_t PacketSize, size_t num_threads, bool disable_responses);
+		void startUDPEchoServer(size_t PacketSize, size_t num_threads, bool disable_responses);
 		void stopUDPEchoServer();
 		void getUDPEchoServerData();
 

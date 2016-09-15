@@ -78,6 +78,11 @@ bool Communicator::talk(const ppl7::AssocArray &msg, ppl7::AssocArray &answer, p
 		return false;
 	}
 	Msg.getPayload(answer);
+	if (answer.getString("result") != "ok") {
+		throw CommandFailedException("cmd=%s, error=%s",
+				(const char*) msg.getString("command"),
+				(const char*) answer.getString("error"));
+	}
 	//printf ("Answer:\n");
 	//answer.list();
 	return true;
@@ -159,3 +164,41 @@ void Communicator::getSensorData(std::list<SystemStat> &data)
 		data.push_back(s);
 	}
 }
+
+
+void Communicator::startUDPEchoServer(size_t PacketSize, size_t num_threads, bool disable_responses)
+{
+	ppl7::AssocArray msg, answer;
+	msg.set("command","startudpechoserver");
+	msg.setf("packetsize", "%zd", PacketSize);
+	msg.setf("threads", "%zd", num_threads);
+	msg.setf("disable_responses", "%d", disable_responses);
+
+	try {
+		if (!talk(msg, answer)) {
+			ppl7::TCPSocket::disconnect();
+			throw ppl7::OperationFailedException("startudpechoserver");
+		}
+	} catch (...) {
+		ppl7::TCPSocket::disconnect();
+		throw;
+	}
+
+}
+
+void Communicator::stopUDPEchoServer()
+{
+	ppl7::AssocArray msg, answer;
+	msg.set("command","stopudpechoserver");
+	try {
+		if (!talk(msg, answer)) {
+			ppl7::TCPSocket::disconnect();
+			throw ppl7::OperationFailedException("stopudpechoserver");
+		}
+	} catch (...) {
+		ppl7::TCPSocket::disconnect();
+		throw;
+	}
+
+}
+

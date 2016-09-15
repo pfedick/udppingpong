@@ -4,6 +4,9 @@
 
 class SystemStat;
 
+PPLEXCEPTION(CommandFailedException, Exception);
+
+
 class Communicator : private ppl7::TCPSocket
 {
 	private:
@@ -32,6 +35,10 @@ class Communicator : private ppl7::TCPSocket
 		void startSensor();
 		void stopSensor();
 		void getSensorData(std::list<SystemStat> &data);
+
+		void startUDPEchoServer(size_t PacketSize, size_t num_threads, bool disable_responses);
+		void stopUDPEchoServer();
+
 
 
 };

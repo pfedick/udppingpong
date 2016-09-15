@@ -21,22 +21,6 @@
  */
 
 
-/*!\brief Hilfe anzeigen
- *
- * Zeigt die Hilfe für die Konsolenparameter an.
- */
-void UDPEchoBouncer::help()
-{
-	printf ("Usage:\n"
-			"  -h           zeigt diese Hilfe an\n"
-			"  -s HOST:PORT Hostname oder IP und Port, an den sich der Echo-Server binden soll\n"
-			"  -n #         Anzahl Worker-Threads (Default=1)\n"
-			"  -q           quiet, es wird nichts auf stdout ausgegeben\n"
-			"  -p #         Groesse der Antwortpakete (Default=so gross wie eingehendes Paket)\n"
-			"  --noecho     Es werden keine Antworten zurueckgeschickt\n"
-			"\n");
-
-}
 
 /*!\brief Konstruktor
  *
@@ -47,15 +31,6 @@ UDPEchoBouncer::UDPEchoBouncer()
 	noEcho=false;
 	sockfd=0;
 	packetSize=0;
-	// Socket anlegen
-	sockfd=::socket(AF_INET, SOCK_DGRAM, 0);
-	if (!sockfd) throw ppl7::CouldNotOpenSocketException("Could not create Socket");
-	const int trueValue = 1;
-	// Wir erlauben anderen Threads/Programmen sich auf das gleichen Socket zu binden
-	setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &trueValue, sizeof(trueValue));
-#ifdef SO_REUSEPORT
-	setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &trueValue, sizeof(trueValue));
-#endif
 }
 
 
@@ -66,6 +41,20 @@ UDPEchoBouncer::~UDPEchoBouncer()
 		::close(sockfd);
 	}
 }
+
+void UDPEchoBouncer::createSocket()
+{
+	if (sockfd) ::close(sockfd);
+	sockfd=::socket(AF_INET, SOCK_DGRAM, 0);
+	if (!sockfd) throw ppl7::CouldNotOpenSocketException("Could not create Socket");
+	const int trueValue = 1;
+	// Wir erlauben anderen Threads/Programmen sich auf das gleichen Socket zu binden
+	setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &trueValue, sizeof(trueValue));
+#ifdef SO_REUSEPORT
+	setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &trueValue, sizeof(trueValue));
+#endif
+}
+
 
 /*!\brief Hostname auflösen und IP in Socket-Datenstruktur zurueckgeben
  *
@@ -173,8 +162,8 @@ void UDPEchoBouncer::setFixedResponsePacketSize(size_t size)
 
 void UDPEchoBouncer::setInterface(const ppl7::String &InterfaceName, int Port)
 {
-	ppl7::SockAddr sockaddr=getSockAddr(InterfaceName,Port);
-	bind(sockaddr);
+	sockaddr=getSockAddr(InterfaceName,Port);
+
 }
 
 void UDPEchoBouncer::disableResponses(bool flag)
@@ -184,7 +173,10 @@ void UDPEchoBouncer::disableResponses(bool flag)
 
 void UDPEchoBouncer::start(size_t num_threads)
 {
+	stop();
 	if (!num_threads) num_threads=1;
+	createSocket();
+	bind(sockaddr);
 	startBouncerThreads(num_threads);
 	this->threadStart();
 
@@ -195,6 +187,13 @@ void UDPEchoBouncer::stop()
 	this->threadSignalStop();
 	threadpool.destroyAllThreads();
 	this->threadStop();
+	if (sockfd) {
+		::close(sockfd);
+		sockfd=0;
+	}
 }
 
-
+bool UDPEchoBouncer::isRunning()
+{
+	return threadIsRunning();
+}

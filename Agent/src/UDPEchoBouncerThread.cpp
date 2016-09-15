@@ -157,5 +157,4 @@ void UDPEchoBouncerThread::run()
 				break;
 		}
 	}
-	//printf ("Thread-Ende\n");
 }

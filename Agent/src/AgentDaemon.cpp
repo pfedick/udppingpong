@@ -140,18 +140,26 @@ void AgentDaemon::getSensorData(std::list<SystemStat> &data)
 	Sensor.getSensorData(data);
 }
 
-void AgentDaemon::startUDPEchoServer(const ppl7::String &InterfaceName, int Port, size_t PacketSize, size_t num_threads, bool disable_responses)
+void AgentDaemon::startUDPEchoServer(size_t PacketSize, size_t num_threads, bool disable_responses)
 {
 	stopUDPEchoServer();
+	Log.print(ppl7::Logger::DEBUG,3,__FILE__,__LINE__,
+			ppl7::ToString("Starting UDPEchoServer @ %s:%d",
+					(const char*)conf.UDPEchoInterfaceName, conf.UDPEchoInterfacePort));
 	UDPEchoServer->setFixedResponsePacketSize(PacketSize);
 	UDPEchoServer->disableResponses(disable_responses);
-	UDPEchoServer->setInterface(InterfaceName, Port);
+	UDPEchoServer->setInterface(conf.UDPEchoInterfaceName, conf.UDPEchoInterfacePort);
 	UDPEchoServer->start(num_threads);
+	Log.print(ppl7::Logger::DEBUG,3,__FILE__,__LINE__,"UDPEchoServer started");
 }
 
 void AgentDaemon::stopUDPEchoServer()
 {
-	UDPEchoServer->stop();
+	if (UDPEchoServer->isRunning()) {
+		Log.print(ppl7::Logger::DEBUG,3,__FILE__,__LINE__,"Stopping UDPEchoServer");
+		UDPEchoServer->stop();
+		Log.print(ppl7::Logger::DEBUG,3,__FILE__,__LINE__,"UDPEchoServer stopped");
+	}
 }
 
 void AgentDaemon::getUDPEchoServerData()

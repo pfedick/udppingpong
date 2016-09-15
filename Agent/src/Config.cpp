@@ -14,7 +14,7 @@ void Config::loadFromFile(const ppl7::String &Filename)
 	parser.selectSection("interface");
 	InterfaceName=parser.get("Host");
 	InterfacePort=parser.getInt("Port");
-	parser.selectSection("interface");
+	parser.selectSection("udpecho");
 	UDPEchoInterfaceName=parser.get("Host","");
 	UDPEchoInterfacePort=parser.getInt("Port",0);
 }

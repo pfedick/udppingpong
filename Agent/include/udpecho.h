@@ -138,25 +138,27 @@ class UDPEchoBouncer : private ppl7::Thread
 		ppl7::ThreadPool threadpool;
 		bool noEcho;
 		struct sockaddr_in servaddr;
+		ppl7::SockAddr sockaddr;
 		int sockfd;
 		size_t packetSize;
 
-		void run();
+
 		ppl7::SockAddr getSockAddr(const ppl7::String &Hostname, int Port);
 		void startBouncerThreads(size_t ThreadCount);
 		void bind(const ppl7::SockAddr &sockaddr);
+		void createSocket();
 
 	public:
 		UDPEchoBouncer();
 		~UDPEchoBouncer();
-		void help();
-		int main(int argc, char**argv);
+		void run();
 
 		void setFixedResponsePacketSize(size_t size);
 		void setInterface(const ppl7::String &InterfaceName, int Port);
 		void disableResponses(bool flag);
 		void start(size_t num_threads);
 		void stop();
+		bool isRunning();
 };
 
 
