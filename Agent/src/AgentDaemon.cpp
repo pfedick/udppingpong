@@ -20,12 +20,11 @@ AgentDaemon::AgentDaemon()
 	Log.setLogLevel(ppl7::Logger::CRIT,10);
 	Log.setLogLevel(ppl7::Logger::INFO,10);
 	Log.setLogLevel(ppl7::Logger::DEBUG,10);
-	UDPEchoServer=new UDPEchoBouncer();
 }
 
 AgentDaemon::~AgentDaemon()
 {
-	delete UDPEchoServer;
+
 }
 
 void AgentDaemon::help()
@@ -146,23 +145,23 @@ void AgentDaemon::startUDPEchoServer(size_t PacketSize, size_t num_threads, bool
 	Log.print(ppl7::Logger::DEBUG,3,__FILE__,__LINE__,
 			ppl7::ToString("Starting UDPEchoServer @ %s:%d",
 					(const char*)conf.UDPEchoInterfaceName, conf.UDPEchoInterfacePort));
-	UDPEchoServer->setFixedResponsePacketSize(PacketSize);
-	UDPEchoServer->disableResponses(disable_responses);
-	UDPEchoServer->setInterface(conf.UDPEchoInterfaceName, conf.UDPEchoInterfacePort);
-	UDPEchoServer->start(num_threads);
+	UDPEchoServer.setFixedResponsePacketSize(PacketSize);
+	UDPEchoServer.disableResponses(disable_responses);
+	UDPEchoServer.setInterface(conf.UDPEchoInterfaceName, conf.UDPEchoInterfacePort);
+	UDPEchoServer.start(num_threads);
 	Log.print(ppl7::Logger::DEBUG,3,__FILE__,__LINE__,"UDPEchoServer started");
 }
 
 void AgentDaemon::stopUDPEchoServer()
 {
-	if (UDPEchoServer->isRunning()) {
+	if (UDPEchoServer.isRunning()) {
 		Log.print(ppl7::Logger::DEBUG,3,__FILE__,__LINE__,"Stopping UDPEchoServer");
-		UDPEchoServer->stop();
+		UDPEchoServer.stop();
 		Log.print(ppl7::Logger::DEBUG,3,__FILE__,__LINE__,"UDPEchoServer stopped");
 	}
 }
 
-void AgentDaemon::getUDPEchoServerData()
+void AgentDaemon::getUDPEchoServerData(std::list<UDPEchoCounter> &data)
 {
-
+	UDPEchoServer.getStats(data);
 }

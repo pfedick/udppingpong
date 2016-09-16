@@ -29,6 +29,22 @@ void getSensorData(Communicator &comm, SystemStat &previous)
 	}
 }
 
+void getUDPEchoStats(Communicator &comm)
+{
+	std::list<UDPEchoCounter> data;
+	comm.getUDPEchoServerData(data);
+	printf ("Wir haben %zd Datensaetze\n",data.size());
+	std::list<UDPEchoCounter>::const_iterator it;
+	for (it=data.begin();it!=data.end();++it) {
+		printf ("### UDPEcho packets_received: %llu, bytes_received: %llu, packets_send: %llu, bytes_send: %llu\n",
+				(*it).packets_received,
+				(*it).bytes_received,
+				(*it).packets_send,
+				(*it).bytes_send);
+	}
+}
+
+
 int main(int argc, char**argv)
 {
 	Communicator comm;
@@ -49,9 +65,10 @@ int main(int argc, char**argv)
 		printf ("Wir haben initial %zd Datensaetze\n",sensordata_list.size());
 		sensordata_previous=(*sensordata_list.begin());
 
-		for (int i=0;i<6;i++) {
+		for (int i=0;i<10;i++) {
 			sleep(1);
 			getSensorData(comm, sensordata_previous);
+			getUDPEchoStats(comm);
 		}
 		comm.stopUDPEchoServer();
 		printf ("next ping\n");

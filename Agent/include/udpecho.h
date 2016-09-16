@@ -7,7 +7,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
-
+#include <dnsperftest_sensor.h>
 
 typedef struct {
 		ppluint64 id;
@@ -142,6 +142,9 @@ class UDPEchoBouncer : private ppl7::Thread
 		int sockfd;
 		size_t packetSize;
 
+		ppl7::Mutex	counterMutex;
+		std::list<UDPEchoCounter>	samples;
+
 
 		ppl7::SockAddr getSockAddr(const ppl7::String &Hostname, int Port);
 		void startBouncerThreads(size_t ThreadCount);
@@ -159,25 +162,23 @@ class UDPEchoBouncer : private ppl7::Thread
 		void start(size_t num_threads);
 		void stop();
 		bool isRunning();
+
+		void clearStats();
+		void getStats(std::list<UDPEchoCounter> &data);
+
 };
 
 
 
 class UDPEchoBouncerThread : public ppl7::Thread
 {
-	public:
-		class Counter {
-			public:
-				ppluint64 count;
-				ppluint64 bytes;
-		};
 	private:
 		int sockfd;
 		ppl7::ByteArray buffer;
 		void *pBuffer;
 		ppl7::Mutex mutex;
 		bool noEcho;
-		Counter counter;
+		UDPEchoCounter counter;
 		size_t packetSize;
 
 
@@ -188,7 +189,7 @@ class UDPEchoBouncerThread : public ppl7::Thread
 		void setPacketSize(size_t bytes);
 		void setSocketDescriptor(int sockfd);
 		void run();
-		UDPEchoBouncerThread::Counter getAndClearCounter();
+		UDPEchoCounter getAndClearCounter();
 
 };
 

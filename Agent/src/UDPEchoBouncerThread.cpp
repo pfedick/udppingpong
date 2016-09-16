@@ -43,8 +43,10 @@ UDPEchoBouncerThread::UDPEchoBouncerThread()
 {
 	noEcho=false;
 	sockfd=0;
-	counter.count=0;
-	counter.bytes=0;
+	counter.packets_received=0;
+	counter.packets_send=0;
+	counter.bytes_received=0;
+	counter.bytes_send=0;
 	buffer.malloc(4096);
 	pBuffer=(void*)buffer.adr();
 	sockfd=0;
@@ -103,13 +105,15 @@ void UDPEchoBouncerThread::setSocketDescriptor(int sockfd)
  *
  * @return Datenstruktur UDPEchoBouncerThread::Counter
  */
-UDPEchoBouncerThread::Counter UDPEchoBouncerThread::getAndClearCounter()
+UDPEchoCounter UDPEchoBouncerThread::getAndClearCounter()
 {
-	Counter ret;
+	UDPEchoCounter ret;
 	mutex.lock();
 	ret=counter;
-	counter.count=0;
-	counter.bytes=0;
+	counter.packets_received=0;
+	counter.packets_send=0;
+	counter.bytes_received=0;
+	counter.bytes_send=0;
 	mutex.unlock();
 	//printf ("Thread %llu: %llu\n",this->threadGetID(),ret.count);
 	return ret;
@@ -136,14 +140,18 @@ void UDPEchoBouncerThread::run()
 		if (n >= 0) {
 			// Paket zurueck an Absender schicken
 			if (!noEcho) {
-				if (!packetSize)
-					::sendto(sockfd, (void*) (buffer.adr()), n, 0, (struct sockaddr*) (&cliaddr), clilen);
-				else
-					::sendto(sockfd, (void*) (buffer.adr()), packetSize, 0, (struct sockaddr*) (&cliaddr), clilen);
+				counter.packets_send++;
+				if (!packetSize) {
+					counter.bytes_send+=n;
+					::sendto(sockfd, (void*) pBuffer, n, 0, (struct sockaddr*) (&cliaddr), clilen);
+				} else {
+					counter.bytes_send+=packetSize;
+					::sendto(sockfd, (void*) pBuffer, packetSize, 0, (struct sockaddr*) (&cliaddr), clilen);
+				}
 			}
 			mutex.lock();
-			counter.bytes+=n;
-			counter.count++;
+			counter.bytes_received+=n;
+			counter.packets_received++;
 			mutex.unlock();
 		} else {
 			// Auf naechstes Paket warten, maximal 10 ms

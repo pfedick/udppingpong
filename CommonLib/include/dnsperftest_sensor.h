@@ -89,4 +89,19 @@ class SystemStat
 void sampleSensorData(SystemStat &stat);
 
 
+class UDPEchoCounter {
+	public:
+		ppluint64 packets_received;
+		ppluint64 packets_send;
+		ppluint64 bytes_received;
+		ppluint64 bytes_send;
+		double sampleTime;
+		void clear();
+		void exportToArray(ppl7::AssocArray &data) const;
+		void importFromArray(const ppl7::AssocArray &data);
+};
+
+
+
+
 #endif /* INCLUDE_DNSPERFTEST_SENSOR_H_ */

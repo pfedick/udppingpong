@@ -3,6 +3,7 @@
 #include <list>
 
 class SystemStat;
+class UDPEchoCounter;
 
 PPLEXCEPTION(CommandFailedException, Exception);
 
@@ -38,6 +39,7 @@ class Communicator : private ppl7::TCPSocket
 
 		void startUDPEchoServer(size_t PacketSize, size_t num_threads, bool disable_responses);
 		void stopUDPEchoServer();
+		void getUDPEchoServerData(std::list<UDPEchoCounter> &data);
 
 
 

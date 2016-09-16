@@ -148,7 +148,7 @@ void Communicator::getSensorData(std::list<SystemStat> &data)
 	try {
 		if (!talk(msg, answer)) {
 			ppl7::TCPSocket::disconnect();
-			throw ppl7::OperationFailedException("stopSensor");
+			throw ppl7::OperationFailedException("getsensordata");
 		}
 	} catch (...) {
 		ppl7::TCPSocket::disconnect();
@@ -200,5 +200,30 @@ void Communicator::stopUDPEchoServer()
 		throw;
 	}
 
+}
+
+void Communicator::getUDPEchoServerData(std::list<UDPEchoCounter> &data)
+{
+	ppl7::AssocArray msg, answer;
+	data.clear();
+	msg.set("command","getudpechoserverdata");
+	try {
+		if (!talk(msg, answer)) {
+			ppl7::TCPSocket::disconnect();
+			throw ppl7::OperationFailedException("getudpechoserverdata");
+		}
+	} catch (...) {
+		ppl7::TCPSocket::disconnect();
+		throw;
+	}
+	const ppl7::AssocArray row;
+	const ppl7::AssocArray &d=answer.getArray("data");
+	ppl7::AssocArray::Iterator it;
+	d.reset(it);
+	while (d.getNext(it, ppl7::Variant::TYPE_ASSOCARRAY)) {
+		UDPEchoCounter s;
+		s.importFromArray(it.value().toAssocArray());
+		data.push_back(s);
+	}
 }
 

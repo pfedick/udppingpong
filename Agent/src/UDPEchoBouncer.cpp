@@ -21,7 +21,6 @@
  */
 
 
-
 /*!\brief Konstruktor
  *
  * Einige interne Variablen werden mit dem Default-Wert befüllt.
@@ -128,25 +127,25 @@ void UDPEchoBouncer::startBouncerThreads(size_t ThreadCount)
  */
 void UDPEchoBouncer::run()
 {
-	double start = ppl7::GetMicrotime();
-	double end = start + 1;
 	while (!threadShouldStop()) {
-		ppl7::MSleep(100);
-		if (ppl7::GetMicrotime() >= end) {
-			UDPEchoBouncerThread::Counter counter;
-			counter.count=0;
-			counter.bytes=0;
-			ppl7::ThreadPool::const_iterator it;
-			for (it = threadpool.begin(); it != threadpool.end(); ++it) {
-				UDPEchoBouncerThread::Counter c=((UDPEchoBouncerThread*) (*it))->getAndClearCounter();
-				//printf ("   Thread %llu: %llu\n",(*it)->threadGetID(),c.count);
-				counter.count += c.count;
-				counter.bytes += c.bytes;
-			}
-			printf("Packets per second: %10llu, Durchsatz: %10llu Mbit\n", counter.count, counter.bytes*8/(1024*1024));
-			end += 1.0;
+		UDPEchoCounter counter;
+		ppl7::ThreadPool::const_iterator it;
+		counter.clear();
+		counter.sampleTime=ppl7::GetMicrotime();
+		threadpool.lock();
+		for (it = threadpool.begin(); it != threadpool.end(); ++it) {
+			UDPEchoCounter c=((UDPEchoBouncerThread*) (*it))->getAndClearCounter();
+			//printf ("   Thread %llu: %llu\n",(*it)->threadGetID(),c.count);
+			counter.packets_received += c.packets_received;
+			counter.packets_send += c.packets_send;
+			counter.bytes_received += c.bytes_received;
+			counter.bytes_send += c.bytes_send;
 		}
-
+		threadpool.unlock();
+		counterMutex.lock();
+		samples.push_back(counter);
+		counterMutex.unlock();
+		threadSleep(1000);
 	}
 }
 
@@ -175,6 +174,7 @@ void UDPEchoBouncer::start(size_t num_threads)
 {
 	stop();
 	if (!num_threads) num_threads=1;
+	clearStats();
 	createSocket();
 	bind(sockaddr);
 	startBouncerThreads(num_threads);
@@ -184,9 +184,8 @@ void UDPEchoBouncer::start(size_t num_threads)
 
 void UDPEchoBouncer::stop()
 {
-	this->threadSignalStop();
-	threadpool.destroyAllThreads();
 	this->threadStop();
+	threadpool.destroyAllThreads();
 	if (sockfd) {
 		::close(sockfd);
 		sockfd=0;
@@ -197,3 +196,19 @@ bool UDPEchoBouncer::isRunning()
 {
 	return threadIsRunning();
 }
+
+void UDPEchoBouncer::clearStats()
+{
+	counterMutex.lock();
+	samples.clear();
+	counterMutex.unlock();
+}
+
+void UDPEchoBouncer::getStats(std::list<UDPEchoCounter> &data)
+{
+	counterMutex.lock();
+	data=samples;
+	samples.clear();
+	counterMutex.unlock();
+}
+

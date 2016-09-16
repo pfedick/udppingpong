@@ -232,5 +232,15 @@ void AgentClient::cmdStopUDPEchoServer()
 
 void AgentClient::cmdGetUDPEchoServerData()
 {
-
+	std::list<UDPEchoCounter> data;
+	std::list<UDPEchoCounter>::const_iterator it;
+	Main->getUDPEchoServerData(data);
+	ppl7::AssocArray answer;
+	ppl7::AssocArray row;
+	for (it=data.begin();it!=data.end();++it) {
+		(*it).exportToArray(row);
+		answer.set("data/[]",row);
+	}
+	//answer.list();
+	answerOk(answer);
 }
