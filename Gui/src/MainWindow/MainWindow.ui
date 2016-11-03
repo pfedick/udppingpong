@@ -23,8 +23,20 @@
      <height>30</height>
     </rect>
    </property>
+   <widget class="QMenu" name="menuProperties">
+    <property name="title">
+     <string>&amp;Properties</string>
+    </property>
+    <addaction name="actionGUI"/>
+   </widget>
+   <addaction name="menuProperties"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionGUI">
+   <property name="text">
+    <string>GUI</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections/>
