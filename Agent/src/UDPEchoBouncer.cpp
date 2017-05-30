@@ -74,8 +74,7 @@ ppl7::SockAddr UDPEchoBouncer::getSockAddr(const ppl7::String &Hostname, int Por
 		throw ppl7::ResolverException("ERROR: Hostname nicht eindeutig, er loest mit %td IP-Adressen auf\n",hostcount);
 	}
 	ppl7::IPAddress &address=result.front();
-	address.sockaddr.setPort(Port);
-	return address.sockaddr;
+	return ppl7::SockAddr(address,Port);
 }
 
 /*!\brief An einen Socket binden
@@ -92,7 +91,7 @@ void UDPEchoBouncer::bind(const ppl7::SockAddr &sockaddr)
 	if (0 != ::bind(sockfd,(const struct sockaddr *)&servaddr, sizeof(servaddr))) {
 		int e=errno;
 		throw ppl7::CouldNotBindToInterfaceException("%s:%d, %s",
-				(const char*)sockaddr.toString(),
+				(const char*)sockaddr.toIPAddress().toString(),
 				sockaddr.port(),
 				strerror(e));
 	}
