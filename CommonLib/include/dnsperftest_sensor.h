@@ -9,6 +9,7 @@
 #define INCLUDE_DNSPERFTEST_SENSOR_H_
 
 #include <ppl7.h>
+#include <map>
 
 PPL7EXCEPTION(KernelAccessFailed, Exception);
 PPL7EXCEPTION(SystemCallFailed, Exception);
@@ -77,12 +78,20 @@ class SystemStat
 				int procs;
 		};
 
+		class Interface
+		{
+		public:
+			ppl7::String Name;
+			Network receive;
+			Network transmit;
+		};
+
 		double sampleTime;
 
 		Cpu		cpu;
 		Sysinfo	sysinfo;
-		Network net_receive;
-		Network net_transmit;
+		Interface net_total;
+		std::map<ppl7::String, Interface> interfaces;
 
 		void exportToArray(ppl7::AssocArray &data) const;
 		void importFromArray(const ppl7::AssocArray &data);

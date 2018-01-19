@@ -53,27 +53,42 @@ static void sampleSysinfo(SystemStat::Sysinfo &stat)
     stat.procs=info.procs;
 }
 
-static void sampleNetwork(SystemStat::Network &receive, SystemStat::Network &transmit)
+static void sampleNetwork(std::map<ppl7::String, SystemStat::Interface> &interfaces, SystemStat::Interface &total)
 {
-	receive.clear();
-	transmit.clear();
+	total.receive.clear();
+	total.transmit.clear();
 
 	ppl7::String buffer;
 	ppl7::File ff("/proc/net/dev");
 	while (!ff.eof()) {
 		ff.gets(buffer,2048);
 		buffer.trim();
-		if (buffer.left(3)=="eth") {
+		ssize_t t=buffer.instr(":");
+		if (t>1) {
+			SystemStat::Interface nif;
+			nif.Name.set(buffer,t);
 			buffer.replace("\t"," ");
 			ppl7::Array tok=ppl7::StrTok(buffer," ");
-			receive.bytes+=tok[1].toUnsignedLong();
-			receive.packets+=tok[2].toUnsignedLong();
-			receive.errs+=tok[3].toUnsignedLong();
-			receive.drop+=tok[4].toUnsignedLong();
-			transmit.bytes+=tok[9].toUnsignedLong();
-			transmit.packets+=tok[10].toUnsignedLong();
-			transmit.errs+=tok[11].toUnsignedLong();
-			transmit.drop+=tok[12].toUnsignedLong();
+			nif.receive.bytes=tok[1].toUnsignedLong();
+			nif.receive.packets=tok[2].toUnsignedLong();
+			nif.receive.errs=tok[3].toUnsignedLong();
+			nif.receive.drop=tok[4].toUnsignedLong();
+
+			nif.transmit.bytes=tok[9].toUnsignedLong();
+			nif.transmit.packets=tok[10].toUnsignedLong();
+			nif.transmit.errs=tok[11].toUnsignedLong();
+			nif.transmit.drop=tok[12].toUnsignedLong();
+
+			total.receive.bytes+=nif.receive.bytes;
+			total.receive.packets+=nif.receive.packets;
+			total.receive.errs+=nif.receive.errs;
+			total.receive.drop+=nif.receive.drop;
+
+			total.transmit.bytes+=nif.transmit.bytes;
+			total.transmit.packets+=nif.transmit.packets;
+			total.transmit.errs+=nif.transmit.errs;
+			total.transmit.drop+=nif.transmit.drop;
+			interfaces.insert(std::pair<ppl7::String,SystemStat::Interface>(nif.Name,nif));
 		}
 	}
 }
@@ -154,28 +169,49 @@ static void sampleSysinfo(SystemStat::Sysinfo &stat)
 
 }
 
-static void sampleNetwork(SystemStat::Network &receive, SystemStat::Network &transmit)
+static void sampleNetwork(std::map<ppl7::String, SystemStat::Interface> &interfaces, SystemStat::Interface &total)
 {
-   receive.clear();
-   transmit.clear();
+	total.receive.clear();
+	total.transmit.clear();
+
 #define IFA_STAT(s)     (((struct if_data *)ifa->ifa_data)->ifi_ ## s)
 
-   struct ifaddrs *ifap=NULL;
-   if (getifaddrs(&ifap)!=0) {
-       throw SystemCallFailed("FreeBSD, getifaddrs: %s", strerror(errno));
-   }
-   for (struct ifaddrs *ifa=ifap; ifa; ifa = ifa->ifa_next) {
-       if (ifa->ifa_addr->sa_family != AF_LINK) continue;
-       receive.bytes+=IFA_STAT(ibytes);
-       receive.packets+=IFA_STAT(ipackets);
-       receive.errs+=IFA_STAT(ierrors);
-       receive.drop+=IFA_STAT(iqdrops);
-       transmit.bytes+=IFA_STAT(obytes);
-       transmit.packets+=IFA_STAT(opackets);
-       transmit.errs+=IFA_STAT(oerrors);
-       transmit.drop+=IFA_STAT(oqdrops);
-   }
-   freeifaddrs(ifap);
+	struct ifaddrs *ifap=NULL;
+	if (getifaddrs(&ifap)!=0) {
+		throw SystemCallFailed("FreeBSD, getifaddrs: %s", strerror(errno));
+	}
+	for (struct ifaddrs *ifa=ifap; ifa; ifa = ifa->ifa_next) {
+		if (ifa->ifa_addr->sa_family != AF_LINK) continue;
+		SystemStat::Interface nif;
+		nif.Name.setf(("%s",ifa->ifa_name);
+
+		nif.receive.bytes=IFA_STAT(ibytes);
+		nif.receive.packets=IFA_STAT(ipackets);
+		nif.receive.errs=IFA_STAT(ierrors);
+		nif.receive.drop=IFA_STAT(iqdrops);
+
+		nif.transmit.bytes=IFA_STAT(obytes);
+		nif.transmit.packets=IFA_STAT(opackets);
+		nif.transmit.errs=IFA_STAT(oerrors);
+		nif.transmit.drop=IFA_STAT(oqdrops);
+
+		total.receive.bytes+=nif.receive.bytes;
+		total.receive.packets+=nif.receive.packets;
+		total.receive.errs+=nif.receive.errs;
+		total.receive.drop+=nif.receive.drop;
+
+		total.transmit.bytes+=nif.transmit.bytes;
+		total.transmit.packets+=nif.transmit.packets;
+		total.transmit.errs+=nif.transmit.errs;
+		total.transmit.drop+=nif.transmit.drop;
+		interfaces.insert(std::pair<ppl7::String,SystemStat::Interface>(nif.Name,nif));
+	}
+	freeifaddrs(ifap);
+}
+
+static void exit_kvm()
+{
+	if (kd) kvm_close(kd);
 }
 
 #endif
@@ -186,12 +222,13 @@ void sampleSensorData(SystemStat &stat)
     if (!kd) {
         kd = kvm_open(NULL, _PATH_DEVNULL, NULL, O_RDONLY, "kvm_open");
         if (!kd) throw KernelAccessFailed("FreeBSD kvm_open failed");
+        atexit(exit_kvm);
     }
 #endif
 	stat.sampleTime=ppl7::GetMicrotime();
 	sampleCpuUsage(stat.cpu);
 	sampleSysinfo(stat.sysinfo);
-	sampleNetwork(stat.net_receive, stat.net_transmit);
+	sampleNetwork(stat.interfaces, stat.net_total);
 }
 
 double SystemStat::Cpu::getUsage(const SystemStat::Cpu &sample1,const SystemStat::Cpu &sample2)
@@ -222,14 +259,31 @@ SystemStat::Network SystemStat::Network::getDelta(const SystemStat::Network &sam
 void SystemStat::exportToArray(ppl7::AssocArray &data) const
 {
 	data.setf("sampleTime","%0.6f",sampleTime);
-	data.setf("net_receive/bytes","%lu",net_receive.bytes);
-	data.setf("net_receive/packets","%lu",net_receive.packets);
-	data.setf("net_receive/errs","%lu",net_receive.errs);
-	data.setf("net_receive/drop","%lu",net_receive.drop);
-	data.setf("net_transmit/bytes","%lu",net_transmit.bytes);
-	data.setf("net_transmit/packets","%lu",net_transmit.packets);
-	data.setf("net_transmit/errs","%lu",net_transmit.errs);
-	data.setf("net_transmit/drop","%lu",net_transmit.drop);
+	data.setf("net_total/receive/bytes","%lu",net_total.receive.bytes);
+	data.setf("net_total/receive/packets","%lu",net_total.receive.packets);
+	data.setf("net_total/receive/errs","%lu",net_total.receive.errs);
+	data.setf("net_total/receive/drop","%lu",net_total.receive.drop);
+	data.setf("net_total/transmit/bytes","%lu",net_total.transmit.bytes);
+	data.setf("net_total/transmit/packets","%lu",net_total.transmit.packets);
+	data.setf("net_total/transmit/errs","%lu",net_total.transmit.errs);
+	data.setf("net_total/transmit/drop","%lu",net_total.transmit.drop);
+	std::map<ppl7::String, Interface>::const_iterator it;
+	for (it=interfaces.begin();it!=interfaces.end();++it) {
+		ppl7::AssocArray d;
+		const SystemStat::Interface &nif=it->second;
+		d.setf("receive/bytes","%lu",nif.receive.bytes);
+		d.setf("receive/packets","%lu",nif.receive.packets);
+		d.setf("receive/errs","%lu",nif.receive.errs);
+		d.setf("receive/drop","%lu",nif.receive.drop);
+		d.setf("transmit/bytes","%lu",nif.transmit.bytes);
+		d.setf("transmit/packets","%lu",nif.transmit.packets);
+		d.setf("transmit/errs","%lu",nif.transmit.errs);
+		d.setf("transmit/drop","%lu",nif.transmit.drop);
+		d.set("name",nif.Name);
+		ppl7::String key;
+		key.setf("interface/%s",(const char*)nif.Name);
+		data.set(key,d);
+	}
 
 	data.setf("cpu/user","%d",cpu.user);
 	data.setf("cpu/nice","%d",cpu.nice);
@@ -250,15 +304,32 @@ void SystemStat::exportToArray(ppl7::AssocArray &data) const
 void SystemStat::importFromArray(const ppl7::AssocArray &data)
 {
 	sampleTime=data.getString("sampleTime").toDouble();
-	net_receive.bytes=data.getString("net_receive/bytes").toUnsignedLong();
-	net_receive.packets=data.getString("net_receive/packets").toUnsignedLong();
-	net_receive.errs=data.getString("net_receive/errs").toUnsignedLong();
-	net_receive.drop=data.getString("net_receive/drop").toUnsignedLong();
-	net_transmit.bytes=data.getString("net_transmit/bytes").toUnsignedLong();
-	net_transmit.packets=data.getString("net_transmit/packets").toUnsignedLong();
-	net_transmit.errs=data.getString("net_transmit/errs").toUnsignedLong();
-	net_transmit.drop=data.getString("net_transmit/drop").toUnsignedLong();
+	net_total.receive.bytes=data.getString("net_total/receive/bytes").toUnsignedLong();
+	net_total.receive.packets=data.getString("net_total/receive/packets").toUnsignedLong();
+	net_total.receive.errs=data.getString("net_total/receive/errs").toUnsignedLong();
+	net_total.receive.drop=data.getString("net_total/receive/drop").toUnsignedLong();
+	net_total.transmit.bytes=data.getString("net_total/transmit/bytes").toUnsignedLong();
+	net_total.transmit.packets=data.getString("net_total/transmit/packets").toUnsignedLong();
+	net_total.transmit.errs=data.getString("net_total/transmit/errs").toUnsignedLong();
+	net_total.transmit.drop=data.getString("net_total/transmit/drop").toUnsignedLong();
 
+	const ppl7::AssocArray &data_if_list=data.getArray("interface");
+	ppl7::AssocArray::Iterator it;
+	data_if_list.reset(it);
+	while (data_if_list.getNext(it)) {
+		Interface nif;
+        nif.Name=it.key();
+        const ppl7::AssocArray &d=it.value().toAssocArray();
+        nif.receive.bytes=d.getString("receive/bytes").toUnsignedLong();
+        nif.receive.packets=d.getString("receive/packets").toUnsignedLong();
+        nif.receive.errs=d.getString("receive/errs").toUnsignedLong();
+        nif.receive.drop=d.getString("receive/drop").toUnsignedLong();
+        nif.transmit.bytes=d.getString("transmit/bytes").toUnsignedLong();
+        nif.transmit.packets=d.getString("transmit/packets").toUnsignedLong();
+        nif.transmit.errs=d.getString("transmit/errs").toUnsignedLong();
+        nif.transmit.drop=d.getString("transmit/drop").toUnsignedLong();
+        interfaces.insert(std::pair<ppl7::String,SystemStat::Interface>(nif.Name,nif));
+	}
 	cpu.user=data.getString("cpu/user").toInt();
 	cpu.nice=data.getString("cpu/nice").toInt();
 	cpu.system=data.getString("cpu/system").toInt();
