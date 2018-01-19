@@ -5,7 +5,7 @@
 class SystemStat;
 class UDPEchoCounter;
 
-PPLEXCEPTION(CommandFailedException, Exception);
+PPL7EXCEPTION(CommandFailedException, Exception);
 
 
 class Communicator : private ppl7::TCPSocket

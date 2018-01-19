@@ -5,14 +5,23 @@
 #include <signal.h>
 #include <time.h>
 #include <unistd.h>
+
+#ifdef __FreeBSD__
+#include <sys/sysctl.h>
+
+#elif defined __linux__
 #include <sys/sysinfo.h>
+#endif
+
 #include <limits.h>
 
 #include "dnsperftest_sensor.h"
 
+// ########################################################### Linux specific ####################################
+#ifdef __linux__
 static void sampleCpuUsage(SystemStat::Cpu &stat)
 {
-	FILE *fp = fopen("/proc/stat","r");
+    FILE *fp = fopen("/proc/stat","r");
     if (5 != fscanf(fp,"%*s %d %d %d %d %d",&stat.user, &stat.nice, &stat.system, &stat.idle, &stat.iowait)) {
 
     	fclose(fp);
@@ -60,6 +69,21 @@ static void sampleNetwork(SystemStat::Network &receive, SystemStat::Network &tra
 		}
 	}
 }
+
+#elif defined __FreeBSD__
+static void sampleCpuUsage(SystemStat::Cpu &stat)
+{
+}
+
+static void sampleSysinfo(SystemStat::Sysinfo &stat)
+{
+}
+
+static void sampleNetwork(SystemStat::Network &receive, SystemStat::Network &transmit)
+{
+}
+
+#endif
 
 void sampleSensorData(SystemStat &stat)
 {

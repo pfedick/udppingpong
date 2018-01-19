@@ -5,7 +5,6 @@
 #include <signal.h>
 #include <time.h>
 #include <unistd.h>
-#include <sys/sysinfo.h>
 #include <limits.h>
 
 #include <dnsperftest_sensor.h>
