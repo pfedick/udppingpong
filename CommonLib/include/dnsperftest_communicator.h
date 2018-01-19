@@ -1,6 +1,8 @@
 #ifndef INCLUDE_DNSPERFTEST_COMMUNICATOR_H_
 #define INCLUDE_DNSPERFTEST_COMMUNICATOR_H_
 #include <list>
+#include <ppl7.h>
+#include <ppl7-inet.h>
 
 class SystemStat;
 class UDPEchoCounter;

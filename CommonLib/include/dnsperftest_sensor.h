@@ -8,6 +8,7 @@
 #ifndef INCLUDE_DNSPERFTEST_SENSOR_H_
 #define INCLUDE_DNSPERFTEST_SENSOR_H_
 
+#include <ppl7.h>
 
 class SystemStat
 {
