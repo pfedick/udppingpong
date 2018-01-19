@@ -5,7 +5,11 @@
 int main(int argc, char **argv)
 {
 	SystemStat stat;
-	sampleSensorData(stat);
-	stat.print();
+        try {
+	    sampleSensorData(stat);
+	    stat.print();
+        } catch ( const ppl7::Exception &exp) {
+           exp.print();
+        }
 	return 0;
 }

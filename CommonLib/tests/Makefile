@@ -2,6 +2,12 @@ EXTRA_CFLAGS =
 INCLUDE	= -I. -I../include
 CFLAGS	= -ggdb -O2 -Wall  $(INCLUDE) `ppl7-config --cflags release` $(EXTRA_CFLAGS)
 LIBS	= `ppl7-config --libs release` -lrt -lstdc++
+UNAME := $(shell uname)
+ifeq "$(UNAME)" "FreeBSD"
+LIBS += -lkvm
+endif
+
+
 LIBDEP  := $(shell ppl7-config --ppllib release)
 
 OBJECTS = build/main.o

@@ -10,6 +10,9 @@
 
 #include <ppl7.h>
 
+PPL7EXCEPTION(KernelAccessFailed, Exception);
+PPL7EXCEPTION(SystemCallFailed, Exception);
+
 class SystemStat
 {
 	public:

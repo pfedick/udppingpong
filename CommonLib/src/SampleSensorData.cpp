@@ -5,9 +5,17 @@
 #include <signal.h>
 #include <time.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 #ifdef __FreeBSD__
+#include <sys/resource.h>
 #include <sys/sysctl.h>
+#include <paths.h>
+#include <fcntl.h>
+#include <kvm.h>
+#include <ifaddrs.h>
+#include <net/if.h>
 
 #elif defined __linux__
 #include <sys/sysinfo.h>
@@ -33,7 +41,7 @@ static void sampleSysinfo(SystemStat::Sysinfo &stat)
 {
     struct sysinfo info;
     if (0 != sysinfo(&info)) {
-
+        return;
     }
     stat.uptime=info.uptime;
     stat.freeswap=info.freeswap*info.mem_unit;
@@ -71,22 +79,115 @@ static void sampleNetwork(SystemStat::Network &receive, SystemStat::Network &tra
 }
 
 #elif defined __FreeBSD__
+static kvm_t *kd=NULL;
+#define GETSYSCTL(name, var) getsysctl(name, &(var), sizeof(var))
+
+static void
+getsysctl(const char *name, void *ptr, size_t len)
+{
+        size_t nlen = len;
+        if (sysctlbyname(name, ptr, &nlen, NULL, 0) == -1) {
+            throw SystemCallFailed("sysctlbyname(%s...) failed: %s\n", name,
+                    strerror(errno));
+        }
+        if (nlen != len) {
+            throw SystemCallFailed("sysctlbyname(%s...) expected %lu, got %lu\n",
+                    name, (unsigned long)len, (unsigned long)nlen);
+        }
+}
+
+
 static void sampleCpuUsage(SystemStat::Cpu &stat)
 {
+    size_t cp_size = sizeof(long) * CPUSTATES*8;
+    long *cp_times = (long*)malloc(cp_size);
+    if (sysctlbyname("kern.cp_time", cp_times, &cp_size, NULL, 0) < 0) {
+       perror("sysctlbyname");
+       free(cp_times);
+    }
+    stat.user=(int)cp_times[0];
+    stat.nice=(int)cp_times[1];
+    stat.system=(int)cp_times[2];
+    stat.iowait=(int)cp_times[3];
+    stat.idle=(int)cp_times[4];
+
+
 }
+
+static int
+swapmode(long *retavail, long *retfree)
+{
+        int n;
+        int pagesize = getpagesize();
+        struct kvm_swap swapary[1];
+
+        *retavail = 0;
+        *retfree = 0;
+
+#define CONVERT(v)      ((quad_t)(v) * pagesize )
+
+        n = kvm_getswapinfo(kd, swapary, 1, 0);
+        if (n < 0 || swapary[0].ksw_total == 0)
+                return (0);
+
+        *retavail = CONVERT(swapary[0].ksw_total);
+        *retfree = CONVERT(swapary[0].ksw_total - swapary[0].ksw_used);
+
+        n = (int)(swapary[0].ksw_used * 100.0 / swapary[0].ksw_total);
+        return (n);
+}
+
 
 static void sampleSysinfo(SystemStat::Sysinfo &stat)
 {
+    struct timespec uptime;
+    int pagesize = getpagesize();
+    if (clock_gettime(CLOCK_UPTIME, &uptime) == 0)
+        stat.uptime=uptime.tv_sec;
+    swapmode(&stat.totalswap, &stat.freeswap);
+    int tmp;
+    long tmp_l;
+    GETSYSCTL("vm.stats.vm.v_free_count", tmp);
+    stat.freeram=tmp*pagesize;
+    GETSYSCTL("hw.physmem", tmp_l);
+    stat.totalram=tmp_l;
+
 }
 
 static void sampleNetwork(SystemStat::Network &receive, SystemStat::Network &transmit)
 {
+   receive.clear();
+   transmit.clear();
+#define IFA_STAT(s)     (((struct if_data *)ifa->ifa_data)->ifi_ ## s)
+
+   struct ifaddrs *ifap=NULL;
+   if (getifaddrs(&ifap)!=0) {
+       throw SystemCallFailed("FreeBSD, getifaddrs: %s", strerror(errno));
+   }
+   for (struct ifaddrs *ifa=ifap; ifa; ifa = ifa->ifa_next) {
+       if (ifa->ifa_addr->sa_family != AF_LINK) continue;
+       receive.bytes+=IFA_STAT(ibytes);
+       receive.packets+=IFA_STAT(ipackets);
+       receive.errs+=IFA_STAT(ierrors);
+       receive.drop+=IFA_STAT(iqdrops);
+       transmit.bytes+=IFA_STAT(obytes);
+       transmit.packets+=IFA_STAT(opackets);
+       transmit.errs+=IFA_STAT(oerrors);
+       transmit.drop+=IFA_STAT(oqdrops);
+   }
+   freeifaddrs(ifap);
 }
 
 #endif
 
 void sampleSensorData(SystemStat &stat)
 {
+#ifdef __FreeBSD__
+    if (!kd) {
+        kd = kvm_open(NULL, _PATH_DEVNULL, NULL, O_RDONLY, "kvm_open");
+        if (!kd) throw KernelAccessFailed("FreeBSD kvm_open failed");
+    }
+#endif
 	stat.sampleTime=ppl7::GetMicrotime();
 	sampleCpuUsage(stat.cpu);
 	sampleSysinfo(stat.sysinfo);
