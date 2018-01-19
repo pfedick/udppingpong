@@ -183,7 +183,7 @@ static void sampleNetwork(std::map<ppl7::String, SystemStat::Interface> &interfa
 	for (struct ifaddrs *ifa=ifap; ifa; ifa = ifa->ifa_next) {
 		if (ifa->ifa_addr->sa_family != AF_LINK) continue;
 		SystemStat::Interface nif;
-		nif.Name.setf(("%s",ifa->ifa_name);
+		nif.Name.setf("%s",ifa->ifa_name);
 
 		nif.receive.bytes=IFA_STAT(ibytes);
 		nif.receive.packets=IFA_STAT(ipackets);
