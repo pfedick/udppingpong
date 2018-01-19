@@ -4,6 +4,12 @@ CFLAGS	= -ggdb -O2 -Wall  $(INCLUDE) `ppl7-config --cflags release` $(EXTRA_CFLA
 LIBS	= `ppl7-config --libs release` -lrt -lstdc++
 LIBDEP  := $(shell ppl7-config --ppllib release)
 
+UNAME := $(shell uname)
+ifeq "$(UNAME)" "FreeBSD"
+LIBS += -lkvm
+endif
+
+
 OBJECTS = build/main.o build/AgentDaemon.o build/AgentClient.o \
           build/SensorThread.o build/Config.o \
           build/UDPEchoBouncerThread.o build/UDPEchoBouncer.o
