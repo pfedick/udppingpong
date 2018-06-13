@@ -3,16 +3,15 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <string.h>
-
-#include <string.h>
 #include <netinet/in.h>
 #include <errno.h>
 #include <signal.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/select.h>
+#include <time.h>
 
-#include "../include/udpecho.h"
+#include "udpecho.h"
 
 
 /*!@file
@@ -119,6 +118,20 @@ UDPEchoCounter UDPEchoBouncerThread::getAndClearCounter()
 	return ret;
 }
 
+bool UDPEchoBouncerThread::waitForSocketReadable()
+{
+	struct timespec timeout;
+	timeout.tv_sec=0;
+	timeout.tv_nsec=500*1000000;
+	fd_set rset;
+	FD_ZERO(&rset);
+	FD_SET(sockfd,&rset);
+	if (pselect(sockfd+1,&rset,NULL,NULL,&timeout,NULL)>0) {
+		if (FD_ISSET(sockfd,&rset)) return true;
+	}
+	return false;
+}
+
 /*!\brief Thread des Workerthreads
  *
  * Diese Methode wird in einem separaten Thread gestartet und wartet in einer Endlos-
@@ -128,41 +141,39 @@ UDPEchoCounter UDPEchoBouncerThread::getAndClearCounter()
 void UDPEchoBouncerThread::run()
 {
 	struct sockaddr_in cliaddr;
-	struct timespec timeout;
-	timeout.tv_sec=0;
-	timeout.tv_nsec=10*1000000;
-	fd_set rset;
-	double start = ppl7::GetMicrotime();
-	double next_check = start + 0.2;
+	time_t start = time(NULL);
+	time_t next_check = start +1;
+	int socksend=::dup(sockfd);
 	while (1) {
 		socklen_t clilen = sizeof(cliaddr);
 		ssize_t n = ::recvfrom(sockfd, pBuffer, 4096, 0, (struct sockaddr*) (&cliaddr), &clilen);
+		ssize_t bytes_send=0;
 		if (n >= 0) {
 			// Paket zurueck an Absender schicken
 			if (!noEcho) {
-				counter.packets_send++;
 				if (!packetSize) {
-					counter.bytes_send+=n;
-					::sendto(sockfd, (void*) pBuffer, n, 0, (struct sockaddr*) (&cliaddr), clilen);
+					bytes_send+=n;
+					::sendto(socksend, (void*) pBuffer, n, 0, (struct sockaddr*) (&cliaddr), clilen);
 				} else {
-					counter.bytes_send+=packetSize;
-					::sendto(sockfd, (void*) pBuffer, packetSize, 0, (struct sockaddr*) (&cliaddr), clilen);
+					bytes_send=packetSize;
+					::sendto(socksend, (void*) pBuffer, packetSize, 0, (struct sockaddr*) (&cliaddr), clilen);
 				}
 			}
 			mutex.lock();
+			counter.bytes_send+=n;
+			if (!noEcho) counter.packets_send++;
 			counter.bytes_received+=n;
 			counter.packets_received++;
 			mutex.unlock();
 		} else {
-			// Auf naechstes Paket warten, maximal 10 ms
-			FD_ZERO(&rset);
-			FD_SET(sockfd,&rset);
-			pselect(sockfd+1,&rset,NULL,NULL,&timeout,NULL);
+			waitForSocketReadable();
 		}
-		if (ppl7::GetMicrotime() >= next_check) {
-			next_check += 0.2;
+		if (time(NULL) >= next_check) {
+			next_check += 1;
 			if (this->threadShouldStop())
 				break;
+
 		}
 	}
+	::close(socksend);
 }

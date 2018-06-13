@@ -38,10 +38,12 @@ class Communicator : private ppl7::TCPSocket
 		void startSensor();
 		void stopSensor();
 		void getSensorData(std::list<SystemStat> &data);
+		SystemStat getSystemStat();
 
-		void startUDPEchoServer(size_t PacketSize, size_t num_threads, bool disable_responses);
+		void startUDPEchoServer(const ppl7::String &hostname, int port, size_t num_threads, size_t PacketSize, bool disable_responses);
 		void stopUDPEchoServer();
 		void getUDPEchoServerData(std::list<UDPEchoCounter> &data);
+
 
 
 

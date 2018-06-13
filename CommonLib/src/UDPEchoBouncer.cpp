@@ -10,7 +10,6 @@
 #include <signal.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <queue>
 
 #include "../include/udpecho.h"
 
@@ -28,6 +27,7 @@
 UDPEchoBouncer::UDPEchoBouncer()
 {
 	noEcho=false;
+	running=false;
 	sockfd=0;
 	packetSize=0;
 }
@@ -97,6 +97,9 @@ void UDPEchoBouncer::bind(const ppl7::SockAddr &sockaddr)
 	}
 	// Der Socket soll nicht blockieren, wenn keine Daten anstehen
 	fcntl(sockfd,F_SETFL,fcntl(sockfd,F_GETFL,0)|O_NONBLOCK);
+	int optval = 1;
+	setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
+
 }
 
 
@@ -124,6 +127,7 @@ void UDPEchoBouncer::startBouncerThreads(size_t ThreadCount)
  *
  * Gibt solange sekündlich eine Statusmeldung aus, bis das Programm gestoppt wird.
  */
+/*
 void UDPEchoBouncer::run()
 {
 	while (!threadShouldStop()) {
@@ -147,6 +151,7 @@ void UDPEchoBouncer::run()
 		threadSleep(1000);
 	}
 }
+*/
 
 void UDPEchoBouncer::setFixedResponsePacketSize(size_t size)
 {
@@ -173,41 +178,45 @@ void UDPEchoBouncer::start(size_t num_threads)
 {
 	stop();
 	if (!num_threads) num_threads=1;
-	clearStats();
+	//clearStats();
 	createSocket();
 	bind(sockaddr);
 	startBouncerThreads(num_threads);
-	this->threadStart();
-
+	//this->threadStart();
+	running=true;
 }
 
 void UDPEchoBouncer::stop()
 {
-	this->threadStop();
+	//this->threadStop();
 	threadpool.destroyAllThreads();
 	if (sockfd) {
 		::close(sockfd);
 		sockfd=0;
 	}
+	running=false;
 }
 
 bool UDPEchoBouncer::isRunning()
 {
-	return threadIsRunning();
+	return running;
 }
 
-void UDPEchoBouncer::clearStats()
+UDPEchoCounter UDPEchoBouncer::getCounter()
 {
-	counterMutex.lock();
-	samples.clear();
-	counterMutex.unlock();
+	UDPEchoCounter counter;
+	ppl7::ThreadPool::const_iterator it;
+	counter.clear();
+	counter.sampleTime=ppl7::GetMicrotime();
+	threadpool.lock();
+	for (it = threadpool.begin(); it != threadpool.end(); ++it) {
+		UDPEchoCounter c=((UDPEchoBouncerThread*) (*it))->getAndClearCounter();
+		//printf ("   Thread %llu: %llu\n",(*it)->threadGetID(),c.count);
+		counter.packets_received += c.packets_received;
+		counter.packets_send += c.packets_send;
+		counter.bytes_received += c.bytes_received;
+		counter.bytes_send += c.bytes_send;
+	}
+	threadpool.unlock();
+	return counter;
 }
-
-void UDPEchoBouncer::getStats(std::list<UDPEchoCounter> &data)
-{
-	counterMutex.lock();
-	data=samples;
-	samples.clear();
-	counterMutex.unlock();
-}
-

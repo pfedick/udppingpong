@@ -4,7 +4,11 @@ CFLAGS	= -ggdb -O2 -Wall  $(INCLUDE) `ppl7-config --cflags release` $(EXTRA_CFLA
 LIBS	= `ppl7-config --libs release` -lrt -lstdc++
 LIBDEP  := $(shell ppl7-config --ppllib release)
 
-OBJECTS = build/SampleSensorData.o build/Communicator.o build/UDPEchoCounter.o
+OBJECTS = build/SampleSensorData.o build/Communicator.o build/UDPEchoCounter.o \
+		build/UDPEchoBouncer.o build/UDPEchoBouncerThread.o \
+		build/UDPEchoSenderThread.o build/UDPEchoReceiverThread.o \
+		build/UDPEchoSender.o
+		
 
 build/libdnsperftest.a: $(OBJECTS) Makefile $(LIBDEP)
 	ar -r build/libdnsperftest.a $(OBJECTS)
@@ -20,6 +24,27 @@ build/Communicator.o: src/Communicator.cpp Makefile include/dnsperftest_communic
 build/UDPEchoCounter.o: src/UDPEchoCounter.cpp Makefile include/dnsperftest_sensor.h
 	mkdir -p build
 	$(CXX) $(CFLAGS) -o build/UDPEchoCounter.o -c src/UDPEchoCounter.cpp
+
+build/UDPEchoBouncer.o: src/UDPEchoBouncer.cpp Makefile include/udpecho.h
+	mkdir -p build
+	$(CXX) $(CFLAGS) -o build/UDPEchoBouncer.o -c src/UDPEchoBouncer.cpp
+
+build/UDPEchoSender.o: src/UDPEchoSender.cpp Makefile include/udpecho.h
+	mkdir -p build
+	$(CXX) $(CFLAGS) -o build/UDPEchoSender.o -c src/UDPEchoSender.cpp
+
+build/UDPEchoBouncerThread.o: src/UDPEchoBouncerThread.cpp Makefile include/udpecho.h
+	mkdir -p build
+	$(CXX) $(CFLAGS) -o build/UDPEchoBouncerThread.o -c src/UDPEchoBouncerThread.cpp
+
+build/UDPEchoSenderThread.o: src/UDPEchoSenderThread.cpp Makefile include/udpecho.h
+	mkdir -p build
+	$(CXX) $(CFLAGS) -o build/UDPEchoSenderThread.o -c src/UDPEchoSenderThread.cpp
+
+build/UDPEchoReceiverThread.o: src/UDPEchoReceiverThread.cpp Makefile include/udpecho.h
+	mkdir -p build
+	$(CXX) $(CFLAGS) -o build/UDPEchoReceiverThread.o -c src/UDPEchoReceiverThread.cpp
+
 
 clean:
 	-rm -rf build

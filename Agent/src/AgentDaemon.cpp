@@ -37,8 +37,13 @@ int AgentDaemon::main(int argc, char **argv)
 		if (ppl7::HaveArgv(argc,argv,"-c")) {
 			conf.loadFromFile(ppl7::GetArgv(argc,argv,"-c"));
 		} else {
-			if (ppl7::File::exists("dnsperftest.conf")) conf.loadFromFile("dnsperftest.conf");
-			else {
+			std::list<ppl7::String> filelist;
+			filelist.push_back("dnsperftest.conf");
+			filelist.push_back("/etc/dnsperftest.conf");
+			filelist.push_back("/usr/local/etc/dnsperftest.conf");
+			try {
+				conf.loadFromFile(filelist);
+			} catch (const NoConfigurationFileFound &e) {
 				printf ("ERROR: no configuration file found\n");
 				help();
 				return 1;
@@ -138,15 +143,15 @@ void AgentDaemon::getSensorData(std::list<SystemStat> &data)
 	Sensor.getSensorData(data);
 }
 
-void AgentDaemon::startUDPEchoServer(size_t PacketSize, size_t num_threads, bool disable_responses)
+void AgentDaemon::startUDPEchoServer(const ppl7::String &hostname, int port, size_t num_threads, size_t PacketSize, bool disable_responses)
 {
 	stopUDPEchoServer();
 	Log.print(ppl7::Logger::DEBUG,3,__FILE__,__LINE__,
 			ppl7::ToString("Starting UDPEchoServer @ %s:%d",
-					(const char*)conf.UDPEchoInterfaceName, conf.UDPEchoInterfacePort));
-	UDPEchoServer.setFixedResponsePacketSize(PacketSize);
+					(const char*)hostname, port));
+	if (PacketSize)	UDPEchoServer.setFixedResponsePacketSize(PacketSize);
 	UDPEchoServer.disableResponses(disable_responses);
-	UDPEchoServer.setInterface(conf.UDPEchoInterfaceName, conf.UDPEchoInterfacePort);
+	UDPEchoServer.setInterface(hostname, port);
 	UDPEchoServer.start(num_threads);
 	Log.print(ppl7::Logger::DEBUG,3,__FILE__,__LINE__,"UDPEchoServer started");
 }

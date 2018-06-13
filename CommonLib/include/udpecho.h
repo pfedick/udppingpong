@@ -14,47 +14,22 @@ typedef struct {
 		double time;
 } PACKET;
 
-class UDPEchoSender
+class UDPSenderResults
 {
-	private:
-
-		class Results
-		{
-			public:
-				int			queryrate;
-				ppluint64	counter_send;
-				ppluint64	counter_received;
-				ppluint64	bytes_received;
-				ppluint64	counter_errors;
-				ppluint64	packages_lost;
-				double		duration;
-				double		rtt_total;
-				double		rtt_min;
-				double		rtt_max;
-		};
-		ppl7::ThreadPool threadpool;
-		ppl7::String Ziel;
-		ppl7::String Quelle;
-		ppl7::File CSVFile;
-		int Packetsize;
-		int Laufzeit;
-		int Timeout;
-		int ThreadCount;
-		int Zeitscheibe;
-		bool ignoreResponses;
-
-		void openCSVFile(const ppl7::String Filename);
-		void run(int queryrate);
-		void presentResults(const UDPEchoSender::Results &result);
-		void saveResultsToCsv(const UDPEchoSender::Results &result);
-		void prepareThreads();
-		void getResults(UDPEchoSender::Results &result);
-		ppl7::Array getQueryRates(const ppl7::String &QueryRates);
-
 	public:
-		UDPEchoSender();
-		void help();
-		int main(int argc, char**argv);
+		int			queryrate;
+		ppluint64	counter_send;
+		ppluint64	counter_received;
+		ppluint64	bytes_send;
+		ppluint64	bytes_received;
+		ppluint64	counter_errors;
+		ppluint64	packages_lost;
+		ppluint64   counter_0bytes;
+		ppluint64   counter_errorcodes[255];
+		double		duration;
+		double		rtt_total;
+		double		rtt_min;
+		double		rtt_max;
 };
 
 class UDPEchoReceiverThread : public ppl7::Thread
@@ -67,7 +42,7 @@ class UDPEchoReceiverThread : public ppl7::Thread
 
 		double rtt_total, rtt_min, rtt_max;
 
-		void receivePackets();
+		void countPacket(const PACKET *p, ssize_t bytes);
 
 	public:
 		UDPEchoReceiverThread();
@@ -83,6 +58,43 @@ class UDPEchoReceiverThread : public ppl7::Thread
 
 };
 
+class UDPEchoSender
+{
+private:
+	ppl7::Array 		SourceIpList;
+	ppl7::ThreadPool	threadpool;
+	ppl7::String		Destination;
+	int					Packetsize;
+	int					Timeout;
+	size_t				ThreadCount;
+	int					Runtime;
+	float				Timeslice;
+	bool				ignoreResponses;
+	bool				verbose;
+
+	void prepareThreads();
+	void destroyThreads();
+
+public:
+	UDPEchoSender();
+	~UDPEchoSender();
+	void setDestination(const ppl7::String &destination);
+	void setRuntime(int sec);
+	void setTimeout(int sec);
+	void setThreads(size_t num);
+	void setPacketsize(int bytes);
+	void setIgnoreResponses(bool ignore);
+	void setTimeslice(float ms);
+	void setVerbose(bool verbose);
+	void addSourceIP(const ppl7::String &ip);
+	void addSourceIP(const ppl7::Array &ip_list);
+	void addSourceIP(const std::list<ppl7::String> &ip_list);
+	void clearSourceIPs();
+	void start(int queryrate);
+	void stop();
+	bool isRunning();
+	UDPSenderResults getResults();
+};
 
 
 class UDPEchoSenderThread : public ppl7::Thread
@@ -95,16 +107,20 @@ class UDPEchoSenderThread : public ppl7::Thread
 		ppl7::String destination;
 		size_t packetsize;
 		ppluint64 queryrate;
+		ppluint64 counter_send, errors, counter_0bytes;
+		ppluint64 counter_errorcodes[255];
 		int runtime;
 		int timeout;
 		double Zeitscheibe;
-		ppluint64 counter_send, errors;
+
 		double duration;
 		int sockfd;
 		bool ignoreResponses;
+		bool verbose;
 
 		void sendPacket();
 		void waitForTimeout();
+		bool socketReady();
 
 		void runWithoutRateLimit();
 		void runWithRateLimit();
@@ -117,13 +133,17 @@ class UDPEchoSenderThread : public ppl7::Thread
 		void setRuntime(int seconds);
 		void setTimeout(int seconds);
 		void setQueryRate(ppluint64 qps);
-		void setZeitscheibe(int ms);
+		void setZeitscheibe(float ms);
 		void setIgnoreResponses(bool flag);
+		void setSourceIP(const ppl7::String &ip);
+		void setVerbose(bool verbose);
 		void run();
 		ppluint64 getPacketsSend() const;
 		ppluint64 getPacketsReceived() const;
 		ppluint64 getBytesReceived() const;
 		ppluint64 getErrors() const;
+		ppluint64 getCounter0Bytes() const;
+		ppluint64 getCounterErrorCode(int err) const;
 		double getDuration() const;
 		double getRoundTripTimeAverage() const;
 		double getRoundTripTimeMin() const;
@@ -132,20 +152,16 @@ class UDPEchoSenderThread : public ppl7::Thread
 
 
 
-class UDPEchoBouncer : private ppl7::Thread
+class UDPEchoBouncer
 {
 	private:
 		ppl7::ThreadPool threadpool;
-		bool noEcho;
 		struct sockaddr_in servaddr;
 		ppl7::SockAddr sockaddr;
 		int sockfd;
 		size_t packetSize;
-
-		ppl7::Mutex	counterMutex;
-		std::list<UDPEchoCounter>	samples;
-
-
+		bool noEcho;
+		bool running;
 		ppl7::SockAddr getSockAddr(const ppl7::String &Hostname, int Port);
 		void startBouncerThreads(size_t ThreadCount);
 		void bind(const ppl7::SockAddr &sockaddr);
@@ -154,26 +170,28 @@ class UDPEchoBouncer : private ppl7::Thread
 	public:
 		UDPEchoBouncer();
 		~UDPEchoBouncer();
-		void run();
-
 		void setFixedResponsePacketSize(size_t size);
 		void setInterface(const ppl7::String &InterfaceName, int Port);
 		void disableResponses(bool flag);
 		void start(size_t num_threads);
 		void stop();
 		bool isRunning();
-
-		void clearStats();
-		void getStats(std::list<UDPEchoCounter> &data);
-
+		UDPEchoCounter getCounter();
 };
 
 
 
 class UDPEchoBouncerThread : public ppl7::Thread
 {
+	public:
+		class Counter {
+			public:
+				ppluint64 count;
+				ppluint64 bytes;
+		};
 	private:
 		int sockfd;
+		ppl7::SockAddr out_addr;
 		ppl7::ByteArray buffer;
 		void *pBuffer;
 		ppl7::Mutex mutex;
@@ -181,6 +199,7 @@ class UDPEchoBouncerThread : public ppl7::Thread
 		UDPEchoCounter counter;
 		size_t packetSize;
 
+		bool waitForSocketReadable();
 
 	public:
 		UDPEchoBouncerThread();
@@ -188,6 +207,7 @@ class UDPEchoBouncerThread : public ppl7::Thread
 		void setNoEcho(bool flag);
 		void setPacketSize(size_t bytes);
 		void setSocketDescriptor(int sockfd);
+		void setSocketAddr(const ppl7::SockAddr &adr);
 		void run();
 		UDPEchoCounter getAndClearCounter();
 

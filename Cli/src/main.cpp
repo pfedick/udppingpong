@@ -48,33 +48,47 @@ void getUDPEchoStats(Communicator &comm)
 int main(int argc, char**argv)
 {
 	Communicator comm;
+	Communicator lg1;
 	try {
-		comm.connect("patrickf-xm3.office.denic.de",50000);
+		comm.connect("xxx.xxx.xxx.xxx",443);
+		lg1.connect("xxx.xxx.xxx.xxx",443);
 		//comm.ping();
 		//printf ("proxy aktivieren\n");
-		//comm.proxyTo("patrickf-xm3.office.denic.de",40000);
+		//comm.proxyTo("xxx.xxx.xxx.xxx",40000);
 		printf ("ping\n");
-		comm.ping();
+		if (!comm.ping()) {
+			printf ("Ping to SUT failed\n");
+		}
+		if (!lg1.ping()) {
+			printf ("Ping to LG failed\n");
+		}
+
 		printf ("ping done\n");
 		comm.startSensor();
-		comm.startUDPEchoServer(1024,2,false);
+		lg1.startSensor();
+		printf ("Sensoren gestartet\n");
+		//comm.startUDPEchoServer(1024,2,false);
+
 
 		std::list<SystemStat> sensordata_list;
 		SystemStat sensordata_previous;
 		comm.getSensorData(sensordata_list);
-		printf ("Wir haben initial %zd Datensaetze\n",sensordata_list.size());
+		printf ("Wir haben initial %zd Datensaetze vom SUT\n",sensordata_list.size());
+
 		sensordata_previous=(*sensordata_list.begin());
 
-		for (int i=0;i<10;i++) {
+		for (int i=0;i<5;i++) {
 			sleep(1);
 			getSensorData(comm, sensordata_previous);
-			getUDPEchoStats(comm);
+			//getUDPEchoStats(comm);
 		}
-		comm.stopUDPEchoServer();
+		//comm.stopUDPEchoServer();
 		printf ("next ping\n");
 		comm.ping();
+		//lg1.ping();
 		printf ("ping done\n");
 		comm.stopSensor();
+		lg1.stopSensor();
 		//getSensorData(comm);
 		return 0;
 	} catch (const ppl7::Exception &ex) {

@@ -4,7 +4,7 @@
 #include <sys/socket.h>
 #include <time.h>
 #include <sys/time.h>
-
+#include <errno.h>
 
 #include "../include/udpecho.h"
 
@@ -43,8 +43,11 @@ UDPEchoSenderThread::UDPEchoSenderThread()
 	timeout=5;
 	counter_send=0;
 	errors=0;
+	counter_0bytes=0;
 	duration=0.0;
 	ignoreResponses=true;
+	for (int i=0;i<255;i++) counter_errorcodes[i]=0;
+	verbose=false;
 }
 
 /*!\brief Destruktor
@@ -126,10 +129,10 @@ void UDPEchoSenderThread::setQueryRate(ppluint64 qps)
  * @exception ppl7::InvalidArgumentsException Wird geworfen, wenn der Wert \p ms nicht den
  * genannten kriterien entspricht.
  */
-void UDPEchoSenderThread::setZeitscheibe(int ms)
+void UDPEchoSenderThread::setZeitscheibe(float ms)
 {
-	if (ms <1 || ms >1000) throw ppl7::InvalidArgumentsException();
-	if ((1000 % ms)!=0) throw ppl7::InvalidArgumentsException();
+	if (ms==0.0f || ms >1000.0f) throw ppl7::InvalidArgumentsException();
+	//if ((1000 % ms)!=0) throw ppl7::InvalidArgumentsException();
 	Zeitscheibe=(double)ms/1000;
 }
 
@@ -145,6 +148,33 @@ void UDPEchoSenderThread::setIgnoreResponses(bool flag)
 	ignoreResponses=flag;
 }
 
+void UDPEchoSenderThread::setSourceIP(const ppl7::String &ip)
+{
+	Socket.setSource(ip);
+}
+
+void UDPEchoSenderThread::setVerbose(bool verbose)
+{
+	this->verbose=verbose;
+}
+
+bool UDPEchoSenderThread::socketReady()
+{
+	fd_set wset;
+	struct timeval timeout;
+	timeout.tv_sec=0;
+	timeout.tv_usec=100;
+	FD_ZERO(&wset);
+	FD_SET(sockfd,&wset); // Wir wollen nur prüfen, ob wir schreiben können
+	int ret=select(sockfd+1,NULL,&wset,NULL,&timeout);
+	if (ret<0) return false;
+	if (FD_ISSET(sockfd,&wset)) {
+		return true;
+	}
+	return false;
+}
+
+
 
 /*!\brief Einzelnes Paket senden
  *
@@ -156,16 +186,15 @@ void UDPEchoSenderThread::setIgnoreResponses(bool flag)
 void UDPEchoSenderThread::sendPacket()
 {
 	PACKET *p=(PACKET*)buffer.ptr();
-	PacketIdMutex.lock();
-	PacketId++;
-	p->id=PacketId;
-	PacketIdMutex.unlock();
 	p->time=ppl7::GetMicrotime();
 	ssize_t n=::send(sockfd,p,packetsize,0);
 	if (n>0 && (size_t)n==packetsize) {
 		counter_send++;
-	} else {
+	} else if (n<0) {
+		if (errno<255) counter_errorcodes[errno]++;
 		errors++;
+	} else {
+		counter_0bytes++;
 	}
 }
 
@@ -189,8 +218,10 @@ void UDPEchoSenderThread::run()
 	if (!ignoreResponses)
 		receiver.threadStart();
 	counter_send=0;
+	counter_0bytes=0;
 	errors=0;
 	duration=0.0;
+	for (int i=0;i<255;i++) counter_errorcodes[i]=0;
 	double start=ppl7::GetMicrotime();
 	if (queryrate>0) {
 		runWithRateLimit();
@@ -212,12 +243,16 @@ void UDPEchoSenderThread::runWithoutRateLimit()
 	double start=ppl7::GetMicrotime();
 	double end=start+(double)runtime;
 	double now,next_checktime=start+0.1;
-	while ((now=ppl7::GetMicrotime())<end) {
+	while (1) {
+		if (socketReady()) {
+			sendPacket();
+		}
+		now=ppl7::GetMicrotime();
 		if (now>next_checktime) {
 			next_checktime=now+0.1;
 			if (this->threadShouldStop()) break;
 		}
-		sendPacket();
+		if (now>end) break;
 	}
 }
 
@@ -254,10 +289,21 @@ void UDPEchoSenderThread::runWithRateLimit()
 	struct timespec ts;
 	ppluint64 total_zeitscheiben=runtime*1000/(Zeitscheibe*1000.0);
 	ppluint64 queries_rest=runtime*queryrate;
-	printf ("Laufzeit: %d s, Dauer Zeitscheibe: %0.3f s, Zeitscheiben total: %llu\n",runtime,Zeitscheibe,total_zeitscheiben);
+	ppl7::SockAddr addr=Socket.getSockAddr();
+	if (verbose) {
+		printf ("Laufzeit: %d s, Dauer Zeitscheibe: %0.6f s, Zeitscheiben total: %llu, Qpzs: %llu, Source: %s:%d\n",
+				runtime,Zeitscheibe,total_zeitscheiben,
+				queries_rest/total_zeitscheiben,
+				(const char*)addr.toIPAddress().toString(), addr.port());
+	}
 	double now=getNsec();
 	double naechste_zeitscheibe=now;
 	double next_checktime=now+0.1;
+
+	double start=ppl7::GetMicrotime();
+	double end=start+(double)runtime;
+	double total_idle=0.0;
+
 	for (ppluint64 z=0;z<total_zeitscheiben;z++) {
 		naechste_zeitscheibe+=Zeitscheibe;
 		ppluint64 restscheiben=total_zeitscheiben-z;
@@ -267,9 +313,11 @@ void UDPEchoSenderThread::runWithRateLimit()
 		for (ppluint64 i=0;i<queries_pro_zeitscheibe;i++) {
 			sendPacket();
 		}
+
 		queries_rest-=queries_pro_zeitscheibe;
 		while ((now=getNsec())<naechste_zeitscheibe) {
 			if (now<naechste_zeitscheibe) {
+				total_idle+=naechste_zeitscheibe-now;
 				ts.tv_sec=0;
 				ts.tv_nsec=(naechste_zeitscheibe-now)*1000000000;
 				nanosleep(&ts,NULL);
@@ -278,7 +326,12 @@ void UDPEchoSenderThread::runWithRateLimit()
 		if (now>next_checktime) {
 			next_checktime=now+0.1;
 			if (this->threadShouldStop()) break;
+			if (ppl7::GetMicrotime()>=end) break;
+			//printf ("Zeitscheiben rest: %llu\n", z);
 		}
+	}
+	if (verbose) {
+		printf ("total idle: %0.6f\n",total_idle);
 	}
 }
 
@@ -338,6 +391,16 @@ ppluint64 UDPEchoSenderThread::getErrors() const
 {
 	return errors;
 }
+
+ppluint64 UDPEchoSenderThread::getCounter0Bytes() const
+{
+	return counter_0bytes;
+}
+
+ppluint64 UDPEchoSenderThread::getCounterErrorCode(int err) const
+{
+	if (err < 255) return counter_errorcodes[err];
+	return 0;}
 
 
 /*!\brief Tatsächliche Laufzeit des Tests auslesen

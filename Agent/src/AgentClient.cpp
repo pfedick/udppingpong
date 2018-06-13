@@ -202,6 +202,16 @@ void AgentClient::cmdGetSensorData()
 	answerOk(answer);
 }
 
+void AgentClient::cmdGetSystemStat()
+{
+	SystemStat s;
+	sampleSensorData(s);
+	ppl7::AssocArray answer, row;
+	s.exportToArray(row);
+	answer.set("data", row);
+	answerOk(answer);
+}
+
 void AgentClient::cmdStartUDPEchoServer(const ppl7::AssocArray &params)
 {
 	//ppl7::String InterfaceName=params.getString("interface");
@@ -209,10 +219,12 @@ void AgentClient::cmdStartUDPEchoServer(const ppl7::AssocArray &params)
 	size_t packet_size = params.getString("packetsize").toInt();
 	size_t num_threads = params.getString("threads").toInt();
 	bool disable_responses = params.getString("disable_responses").toBool();
+	int port = params.getString("port").toInt();
+	ppl7::String hostname = params.getString("hostname");
 
 	if (!num_threads) num_threads=1;
 	try {
-		Main->startUDPEchoServer(packet_size, num_threads, disable_responses);
+		Main->startUDPEchoServer(hostname, port, num_threads, packet_size, disable_responses);
 	} catch (const ppl7::Exception &ex) {
 		answerFailed(ex.toString());
 		return;
