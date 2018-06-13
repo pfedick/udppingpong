@@ -1,0 +1,13 @@
+MAKE = @MAKECMD@
+
+all:
+	cd CommonLib; $(MAKE)
+	cd UdpPingPong; $(MAKE)
+	cd Agent; $(MAKE)
+	cd Cli; $(MAKE)
+	
+clean:
+	cd CommonLib; $(MAKE) clean
+	cd UdpPingPong; $(MAKE) clean
+	cd Agent; $(MAKE) clean
+	cd Cli; $(MAKE) clean
