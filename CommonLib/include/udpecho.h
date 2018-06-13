@@ -117,6 +117,7 @@ class UDPEchoSenderThread : public ppl7::Thread
 		int sockfd;
 		bool ignoreResponses;
 		bool verbose;
+		bool alwaysRandomize;
 
 		void sendPacket();
 		void waitForTimeout();
@@ -137,6 +138,7 @@ class UDPEchoSenderThread : public ppl7::Thread
 		void setIgnoreResponses(bool flag);
 		void setSourceIP(const ppl7::String &ip);
 		void setVerbose(bool verbose);
+		void setAlwaysRandomize(bool flag);
 		void run();
 		ppluint64 getPacketsSend() const;
 		ppluint64 getPacketsReceived() const;

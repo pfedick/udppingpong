@@ -48,6 +48,7 @@ UDPEchoSenderThread::UDPEchoSenderThread()
 	ignoreResponses=true;
 	for (int i=0;i<255;i++) counter_errorcodes[i]=0;
 	verbose=false;
+	alwaysRandomize=false;
 }
 
 /*!\brief Destruktor
@@ -158,6 +159,11 @@ void UDPEchoSenderThread::setVerbose(bool verbose)
 	this->verbose=verbose;
 }
 
+void UDPEchoSenderThread::setAlwaysRandomize(bool flag)
+{
+	this->alwaysRandomize=flag;
+}
+
 bool UDPEchoSenderThread::socketReady()
 {
 	fd_set wset;
@@ -186,6 +192,12 @@ bool UDPEchoSenderThread::socketReady()
 void UDPEchoSenderThread::sendPacket()
 {
 	PACKET *p=(PACKET*)buffer.ptr();
+	if (alwaysRandomize) {
+		char *b=(char*)p;
+		for (size_t i=0;i<packetsize;i++) {
+			b[i]=(char)ppl7::rand(0,255);
+		}
+	}
 	p->time=ppl7::GetMicrotime();
 	ssize_t n=::send(sockfd,p,packetsize,0);
 	if (n>0 && (size_t)n==packetsize) {

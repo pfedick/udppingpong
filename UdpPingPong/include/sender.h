@@ -50,6 +50,7 @@ class UDPSender
 		int ThreadCount;
 		float Zeitscheibe;
 		bool ignoreResponses;
+		bool alwaysRandomize;
 
 		void openCSVFile(const ppl7::String Filename);
 		void run(int queryrate);

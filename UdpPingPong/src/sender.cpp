@@ -80,6 +80,7 @@ void UDPSender::help()
 			"  --ignore      Ignoriere die Antworten\n"
 			"  -b ADR,ADR... Optional: Liste von Quelladressen\n"
 			"  --bl FILE     Optional: Datei mit Liste von Quelladressen\n"
+			"  --ar          Optional: Payload immer randomisieren\n"
 			"\n");
 			//"  -m Messe Laufzeiten (Default=keine Zeitmessung)\n"
 }
@@ -97,6 +98,7 @@ UDPSender::UDPSender()
 	ThreadCount=1;
 	Zeitscheibe=1.0f;
 	ignoreResponses=false;
+	alwaysRandomize=false;
 }
 
 /*!\brief Liste der zu testenden Queryrates erstellen
@@ -156,6 +158,9 @@ int UDPSender::main(int argc, char**argv)
 	}
 	if (ppl7::HaveArgv(argc,argv,"--bl")) {
 		readSourceIPList(ppl7::GetArgv(argc,argv,"--bl"));
+	}
+	if (ppl7::HaveArgv(argc,argv,"--ar")) {
+		alwaysRandomize=true;
 	}
 	if (!ThreadCount) ThreadCount=1;
 	if (!Packetsize) Packetsize=512;
@@ -240,6 +245,7 @@ void UDPSender::prepareThreads()
 		thread->setZeitscheibe(Zeitscheibe);
 		thread->setIgnoreResponses(ignoreResponses);
 		thread->setVerbose(true);
+		thread->setAlwaysRandomize(alwaysRandomize);
 		if (SourceIpList.size()>0) {
 			thread->setSourceIP(SourceIpList[si]);
 			si++;
