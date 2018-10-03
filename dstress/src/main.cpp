@@ -12,6 +12,9 @@
 
 #include "dstress.h"
 
+int oldmain(int argc, char **argv);
+
+
 /*!\brief Stop-Flag
  *
  * Wird vom Signal-Handler sighandler gesetzt, wenn das Programm beendet werden soll.
@@ -44,6 +47,7 @@ void sighandler(int sig)
  */
 int main(int argc, char**argv)
 {
+	return oldmain(argc, argv);
 	DNSSender Sender;
 	return Sender.main(argc,argv);
 }
@@ -444,9 +448,12 @@ void DNSSender::getQuery(ppl7::String &buffer)
 
 int oldmain(int argc, char **argv)
 {
-	DNSSender sender;
-	return sender.main(argc, argv);
+	RawSocket sock;
+	sock.setDestination(ppl7::IPAddress("148.251.94.99"),53);
+	ppl7::SockAddr sadr=sock.getSockAddr();
+	printf ("%s:%d\n",(const char*)sadr.toIPAddress().toString(), sadr.port());
 
+	return 0;
 
 	int sock_r;
 	sock_r=socket(AF_PACKET,SOCK_RAW,htons(0x0800));
@@ -489,7 +496,7 @@ int oldmain(int argc, char **argv)
 
 	try {
 		RawSocket sock;
-		sock.setDestination("148.251.94.99",53);
+		sock.setDestination(ppl7::IPAddress("148.251.94.99"),53);
 
 		Packet pkt;
 		pkt.setDestination("148.251.94.99",53);

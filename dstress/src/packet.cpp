@@ -21,7 +21,6 @@
 #define ISZ sizeof(struct ip)
 #define HDRSZ ISZ+USZ
 #define MAXPACKETSIZE 4096
-//#define PCKSZ HDRSZ+MAXPACKETSIZE+1
 
 static unsigned short in_cksum(unsigned short *addr, int len)
 {

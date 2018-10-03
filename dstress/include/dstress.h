@@ -17,6 +17,7 @@ PPL7EXCEPTION(UnknownRRType, Exception);
 PPL7EXCEPTION(BufferOverflow, Exception);
 PPL7EXCEPTION(UnknownDestination, Exception);
 PPL7EXCEPTION(InvalidQueryFile, Exception);
+PPL7EXCEPTION(UnsupportedIPFamily, Exception);
 
 int MakeQuery(const ppl7::String &query, unsigned char *buffer, size_t buffersize, bool dnssec=false, int udp_payload_size=4096);
 
@@ -52,8 +53,9 @@ private:
 public:
 	RawSocket();
 	~RawSocket();
-	void setDestination(const ppl7::String &ip_addr, int port);
+	void setDestination(const ppl7::IPAddress &ip_addr, int port);
 	ssize_t send(Packet &pkt);
+	ppl7::SockAddr getSockAddr() const;
 };
 
 class RawReceiveSocket
@@ -120,11 +122,9 @@ class DNSSenderThread : public ppl7::Thread
 {
 	private:
 		ppl7::ByteArray buffer;
-		ppl7::UDPSocket Socket;
-		//UDPEchoReceiverThread receiver;
+		RawSocket Socket;
 
 		ppl7::String destination;
-		size_t packetsize;
 		ppluint64 queryrate;
 		ppluint64 counter_send, errors, counter_0bytes;
 		ppluint64 counter_errorcodes[255];
@@ -133,10 +133,8 @@ class DNSSenderThread : public ppl7::Thread
 		double Zeitscheibe;
 
 		double duration;
-		int sockfd;
 		bool ignoreResponses;
 		bool verbose;
-		bool alwaysRandomize;
 
 		void sendPacket();
 		void waitForTimeout();
@@ -155,21 +153,24 @@ class DNSSenderThread : public ppl7::Thread
 		void setTimeout(int seconds);
 		void setQueryRate(ppluint64 qps);
 		void setZeitscheibe(float ms);
-		void setIgnoreResponses(bool flag);
+		//void setIgnoreResponses(bool flag);
 		void setVerbose(bool verbose);
-		void setAlwaysRandomize(bool flag);
 		void run();
 		ppluint64 getPacketsSend() const;
 		ppluint64 getBytesSend() const;
+		/*
 		ppluint64 getPacketsReceived() const;
 		ppluint64 getBytesReceived() const;
+		*/
 		ppluint64 getErrors() const;
 		ppluint64 getCounter0Bytes() const;
 		ppluint64 getCounterErrorCode(int err) const;
+		/*
 		double getDuration() const;
 		double getRoundTripTimeAverage() const;
 		double getRoundTripTimeMin() const;
 		double getRoundTripTimeMax() const;
+		*/
 };
 
 

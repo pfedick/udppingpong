@@ -37,12 +37,12 @@ RawSocket::~RawSocket()
 	close(sd);
 }
 
-void RawSocket::setDestination(const ppl7::String &ip_addr, int port)
+void RawSocket::setDestination(const ppl7::IPAddress &ip_addr, int port)
 {
-	struct sockaddr_in *dest=(struct sockaddr_in *)buffer;
-	dest->sin_family=AF_INET;
-	dest->sin_port=htons(port);
-	dest->sin_addr.s_addr=inet_addr(ip_addr);
+	if (ip_addr.family()!=ppl7::IPAddress::IPv4)
+		throw UnsupportedIPFamily("Only IPv4 is supported");
+	ip_addr.toSockAddr(buffer,sizeof(struct sockaddr_in));
+	((struct sockaddr_in *)buffer)->sin_port=htons(port);
 }
 
 ssize_t RawSocket::send(Packet &pkt)
@@ -51,5 +51,10 @@ ssize_t RawSocket::send(Packet &pkt)
 	if (dest->sin_addr.s_addr==(unsigned int)-1) throw UnknownDestination();
 	return sendto(sd, pkt.ptr(),pkt.size(),0,
 			(const struct sockaddr *)dest, sizeof(struct sockaddr_in));
-
 }
+
+ppl7::SockAddr RawSocket::getSockAddr() const
+{
+	return ppl7::SockAddr(buffer, sizeof(struct sockaddr_in));
+}
+
