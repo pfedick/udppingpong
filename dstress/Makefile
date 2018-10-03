@@ -12,6 +12,7 @@ endif
 OBJECTS = build/main.o \
 	build/mkquery.o \
 	build/rawsocket.o \
+	build/DNSSenderThread.o \
 	build/packet.o  
 
 all: dstress
@@ -36,6 +37,10 @@ build/packet.o: src/packet.cpp Makefile include/dstress.h ../CommonLib/include/u
 build/rawsocket.o: src/rawsocket.cpp Makefile include/dstress.h ../CommonLib/include/udpecho.h
 	mkdir -p build
 	$(CXX) $(CFLAGS) -o build/rawsocket.o -c src/rawsocket.cpp
+
+build/DNSSenderThread.o: src/DNSSenderThread.cpp Makefile include/dstress.h ../CommonLib/include/udpecho.h
+	mkdir -p build
+	$(CXX) $(CFLAGS) -o build/DNSSenderThread.o -c src/DNSSenderThread.cpp
 
 clean:
 	-rm -rf build dstress

@@ -135,7 +135,7 @@ void Packet::setPayload(const void *payload, size_t size)
 
 void Packet::setPayloadDNSQuery(const ppl7::String &query)
 {
-	payload_size=MakeQuery(query,buffer+HDRSZ,buffersize-HDRSZ);
+	payload_size=MakeQuery(query,buffer+HDRSZ,buffersize-HDRSZ, true);
 	struct ip *iphdr = (struct ip *)buffer;
 	struct udphdr *udp = (struct udphdr *)(buffer+ISZ);
 	iphdr->ip_len=htons(HDRSZ+payload_size);
