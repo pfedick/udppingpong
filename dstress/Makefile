@@ -11,8 +11,10 @@ endif
 
 OBJECTS = build/main.o \
 	build/mkquery.o \
-	build/rawsocket.o \
+	build/rawsocketsender.o \
+	build/rawsocketreceiver.o \
 	build/DNSSenderThread.o \
+	build/DNSReceiverThread.o \
 	build/payload.o \
 	build/packet.o  
 
@@ -35,9 +37,13 @@ build/packet.o: src/packet.cpp Makefile include/dstress.h ../CommonLib/include/u
 	mkdir -p build
 	$(CXX) $(CFLAGS) -o build/packet.o -c src/packet.cpp
 
-build/rawsocket.o: src/rawsocket.cpp Makefile include/dstress.h ../CommonLib/include/udpecho.h
+build/rawsocketsender.o: src/rawsocketsender.cpp Makefile include/dstress.h ../CommonLib/include/udpecho.h
 	mkdir -p build
-	$(CXX) $(CFLAGS) -o build/rawsocket.o -c src/rawsocket.cpp
+	$(CXX) $(CFLAGS) -o build/rawsocketsender.o -c src/rawsocketsender.cpp
+
+build/rawsocketreceiver.o: src/rawsocketreceiver.cpp Makefile include/dstress.h ../CommonLib/include/udpecho.h
+	mkdir -p build
+	$(CXX) $(CFLAGS) -o build/rawsocketreceiver.o -c src/rawsocketreceiver.cpp
 
 build/payload.o: src/payload.cpp Makefile include/dstress.h ../CommonLib/include/udpecho.h
 	mkdir -p build
@@ -46,6 +52,10 @@ build/payload.o: src/payload.cpp Makefile include/dstress.h ../CommonLib/include
 build/DNSSenderThread.o: src/DNSSenderThread.cpp Makefile include/dstress.h ../CommonLib/include/udpecho.h
 	mkdir -p build
 	$(CXX) $(CFLAGS) -o build/DNSSenderThread.o -c src/DNSSenderThread.cpp
+
+build/DNSReceiverThread.o: src/DNSReceiverThread.cpp Makefile include/dstress.h ../CommonLib/include/udpecho.h
+	mkdir -p build
+	$(CXX) $(CFLAGS) -o build/DNSReceiverThread.o -c src/DNSReceiverThread.cpp
 
 clean:
 	-rm -rf build dstress

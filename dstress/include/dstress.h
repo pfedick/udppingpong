@@ -21,6 +21,29 @@ PPL7EXCEPTION(UnknownDestination, Exception);
 PPL7EXCEPTION(InvalidQueryFile, Exception);
 PPL7EXCEPTION(UnsupportedIPFamily, Exception);
 
+struct DNS_HEADER
+{
+    unsigned short id; // identification number
+
+    unsigned char rd :1; // recursion desired
+    unsigned char tc :1; // truncated message
+    unsigned char aa :1; // authoritive answer
+    unsigned char opcode :4; // purpose of message
+    unsigned char qr :1; // query/response flag
+
+    unsigned char rcode :4; // response code
+    unsigned char cd :1; // checking disabled
+    unsigned char ad :1; // authenticated data
+    unsigned char z :1; // its z! reserved
+    unsigned char ra :1; // recursion available
+
+    unsigned short q_count; // number of question entries
+    unsigned short ans_count; // number of answer entries
+    unsigned short auth_count; // number of authority entries
+    unsigned short add_count; // number of resource entries
+};
+
+
 int MakeQuery(const ppl7::String &query, unsigned char *buffer, size_t buffersize, bool dnssec=false, int udp_payload_size=4096);
 unsigned short getQueryTimestamp();
 unsigned short getQueryRTT(unsigned short start);
@@ -51,26 +74,33 @@ public:
 
 };
 
-class RawSocket
+class RawSocketSender
 {
 private:
 	void *buffer;
 	int sd;
 public:
-	RawSocket();
-	~RawSocket();
+	RawSocketSender();
+	~RawSocketSender();
 	void setDestination(const ppl7::IPAddress &ip_addr, int port);
 	ssize_t send(Packet &pkt);
 	ppl7::SockAddr getSockAddr() const;
 	bool socketReady();
 };
 
-class RawReceiveSocket
+class RawSocketReceiver
 {
 private:
+	ppl7::IPAddress SourceIP;
+	unsigned char *buffer;
+	int sd;
+	unsigned short SourcePort;
 public:
-	RawReceiveSocket();
-	~RawReceiveSocket();
+	RawSocketReceiver();
+	~RawSocketReceiver();
+	bool socketReady();
+	void setSource(const ppl7::IPAddress &ip_addr, int port);
+	bool receive(size_t &size, double &rtt);
 };
 
 
@@ -84,6 +114,33 @@ public:
 	PayloadFile();
 	void openQueryFile(const ppl7::String &Filename);
 	void getQuery(ppl7::String &buffer);
+};
+
+class DNSReceiverThread : public ppl7::Thread
+{
+	private:
+		RawSocketReceiver Socket;
+		ppluint64 counter_packets_received;
+		ppluint64 counter_bytes_received;
+		double total_rtt;
+		double min_rtt, max_rtt;
+
+
+
+	public:
+		DNSReceiverThread();
+		~DNSReceiverThread();
+		void setSource(const ppl7::IPAddress &ip, int port);
+		void run();
+
+		ppluint64 getPacketsReceived() const;
+		ppluint64 getBytesReceived() const;
+
+		double getDuration() const;
+		double getRoundTripTimeAverage() const;
+		double getRoundTripTimeMin() const;
+		double getRoundTripTimeMax() const;
+
 };
 
 class DNSSender
@@ -116,6 +173,7 @@ class DNSSender
 		ppl7::File CSVFile;
 		ppl7::Array rates;
 		PayloadFile payload;
+		DNSReceiverThread Receiver;
 
 		int TargetPort;
 		int Laufzeit;
@@ -150,7 +208,7 @@ class DNSSenderThread : public ppl7::Thread
 {
 	private:
 		ppl7::ByteArray buffer;
-		RawSocket Socket;
+		RawSocketSender Socket;
 		Packet pkt;
 
 		ppl7::IPAddress destination;
@@ -196,20 +254,12 @@ class DNSSenderThread : public ppl7::Thread
 		void run();
 		ppluint64 getPacketsSend() const;
 		ppluint64 getBytesSend() const;
-		/*
-		ppluint64 getPacketsReceived() const;
-		ppluint64 getBytesReceived() const;
-		*/
 		ppluint64 getErrors() const;
 		ppluint64 getCounter0Bytes() const;
 		ppluint64 getCounterErrorCode(int err) const;
-		/*
-		double getDuration() const;
-		double getRoundTripTimeAverage() const;
-		double getRoundTripTimeMin() const;
-		double getRoundTripTimeMax() const;
-		*/
+
 };
+
 
 
 #endif /* DSTRESS_INCLUDE_DSTRESS_H_ */

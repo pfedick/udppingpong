@@ -68,7 +68,11 @@ unsigned short getQueryRTT(unsigned short start)
  */
 int main(int argc, char**argv)
 {
-	//return oldmain(argc, argv);
+	res_init();
+	// For unknown reason, res_mkquery is much slower (factor 3) when not
+	// setting the following options:
+	_res.options|=RES_USE_EDNS0;
+	_res.options|=RES_USE_DNSSEC;
 	DNSSender Sender;
 	return Sender.main(argc,argv);
 }
@@ -280,6 +284,7 @@ int DNSSender::main(int argc, char**argv)
 
 	DNSSender::Results results;
 	try {
+		Receiver.setSource(TargetIP,TargetPort);
 		prepareThreads();
 		for (size_t i=0;i<rates.size();i++) {
 			results.queryrate=rates[i].toInt();
@@ -359,11 +364,13 @@ void DNSSender::run(int queryrate)
 	for (it=threadpool.begin();it!=threadpool.end();++it) {
 		((DNSSenderThread*)(*it))->setQueryRate(queryrate/ThreadCount);
 	}
+	Receiver.threadStart();
 	threadpool.startThreads();
 	ppl7::MSleep(500);
 	while (threadpool.running()==true && stopFlag==false) {
 		ppl7::MSleep(100);
 	}
+	Receiver.threadStop();
 	if (stopFlag==true) {
 		threadpool.stopThreads();
 		throw ppl7::OperationInterruptedException("Lasttest wurde abgebrochen");
@@ -395,21 +402,21 @@ void DNSSender::getResults(DNSSender::Results &result)
 	for (it=threadpool.begin();it!=threadpool.end();++it) {
 		result.counter_send+=((DNSSenderThread*)(*it))->getPacketsSend();
 		result.bytes_send+=((DNSSenderThread*)(*it))->getBytesSend();
-		//result.counter_received+=((DNSSenderThread*)(*it))->getPacketsReceived();
-		//result.bytes_received+=((DNSSenderThread*)(*it))->getBytesReceived();
 		result.counter_errors+=((DNSSenderThread*)(*it))->getErrors();
 		result.counter_0bytes+=((DNSSenderThread*)(*it))->getCounter0Bytes();
-		//result.duration+=((DNSSenderThread*)(*it))->getDuration();
-		//result.rtt_total+=((DNSSenderThread*)(*it))->getRoundTripTimeAverage();
-		/*
-		double rtt=((DNSSenderThread*)(*it))->getRoundTripTimeMin();
-		if (result.rtt_min==0) result.rtt_min=rtt;
-		else if (rtt<result.rtt_min) result.rtt_min=rtt;
-		rtt=((DNSSenderThread*)(*it))->getRoundTripTimeMax();
-		if (rtt>result.rtt_max) result.rtt_max=rtt;
-		*/
 		for (int i=0;i<255;i++) result.counter_errorcodes[i]+=((DNSSenderThread*)(*it))->getCounterErrorCode(i);
 	}
+
+	result.counter_received=Receiver.getPacketsReceived();
+	result.bytes_received=Receiver.getBytesReceived();
+	result.duration=Receiver.getDuration();
+	result.rtt_total=Receiver.getRoundTripTimeAverage();
+
+	result.rtt_min=Receiver.getRoundTripTimeMin();
+	result.rtt_max=Receiver.getRoundTripTimeMax();
+
+
+
 	result.packages_lost=result.counter_send-result.counter_received;
 	result.duration=result.duration/(double)ThreadCount;
 }
@@ -449,9 +456,12 @@ void DNSSender::presentResults(const DNSSender::Results &result)
 	ppluint64 qps_send=(ppluint64)((double)result.counter_send/result.duration);
 	ppluint64 bps_send=(ppluint64)((double)result.bytes_send/result.duration);
 	ppluint64 qps_received=(ppluint64)((double)result.counter_received/result.duration);
+	ppluint64 bps_received=(ppluint64)((double)result.bytes_received/result.duration);
 	ppluint64 bytes_received=(ppluint64)((double)result.bytes_received/result.duration);
 	printf ("Bytes send:       %10llu, Durchsatz: %10llu MBit\n",result.bytes_send,
 			bps_send/(1024*1024));
+	printf ("Bytes received:   %10llu, Durchsatz: %10llu MBit\n",result.bytes_received,
+			bps_received/(1024*1024));
 
 	printf ("Packets send:     %10llu, Qps: %10llu, Durchsatz: %10llu MBit\n",result.counter_send,
 			qps_send,
