@@ -165,6 +165,7 @@ class DNSSenderThread : public ppl7::Thread
 		int runtime;
 		int timeout;
 		int DnssecRate;
+		int dnsseccounter;
 		double Zeitscheibe;
 
 		double duration;

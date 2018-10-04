@@ -151,10 +151,11 @@ void DNSSenderThread::sendPacket()
 {
 	ppl7::String query;
 	payload->getQuery(query);
-	if (DnssecRate==0) pkt.setPayloadDNSQuery(query,false);
-	else if (DnssecRate==100) pkt.setPayloadDNSQuery(query,true);
+	dnsseccounter+=DnssecRate;
+	if (dnsseccounter<100) pkt.setPayloadDNSQuery(query,false);
 	else {
 		pkt.setPayloadDNSQuery(query,true);
+		dnsseccounter-=100;
 	}
 	if (spoofingEnabled) {
 		//pkt.randomSourcePort();
@@ -189,6 +190,7 @@ void DNSSenderThread::run()
 	if (!spoofingEnabled) {
 		pkt.setSource(sourceip,0x4567);
 	}
+	dnsseccounter=0;
 	counter_packets_send=0;
 	counter_bytes_send=0;
 	counter_0bytes=0;
