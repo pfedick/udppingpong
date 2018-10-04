@@ -22,13 +22,16 @@ DNSSenderThread::DNSSenderThread()
 	runtime=10;
 	timeout=5;
 	queryrate=0;
-	counter_send=0;
+	counter_packets_send=0;
+	counter_bytes_send=0;
 	errors=0;
 	counter_0bytes=0;
 	duration=0.0;
-	ignoreResponses=true;
 	for (int i=0;i<255;i++) counter_errorcodes[i]=0;
 	verbose=false;
+	spoofingEnabled=false;
+	DnssecRate=0;
+	payload=NULL;
 }
 
 /*!\brief Destruktor
@@ -40,25 +43,21 @@ DNSSenderThread::~DNSSenderThread()
 
 }
 
-#ifdef TODO
 
 /*!\brief Zieladresse setzen
  *
  * @param destination String mit Zieladresse und Port
  */
-void DNSSenderThread::setDestination(const ppl7::String &destination)
+void DNSSenderThread::setDestination(const ppl7::IPAddress &ip, int port)
 {
-	this->destination=destination;
+	Socket.setDestination(ip, port);
+	pkt.setDestination(ip, port);
 }
 
-/*!\brief Paketgröße setzen
- *
- * Setzt die Paketgröße
- * @param size Paketgröße in Bytes
- */
-void DNSSenderThread::setPacketsize(size_t size)
+
+void DNSSenderThread::setPayload(PayloadFile &payload)
 {
-	packetsize=size;
+	this->payload=&payload;
 }
 
 /*!\brief Laufzeit festlegen
@@ -82,6 +81,11 @@ void DNSSenderThread::setRuntime(int seconds)
 void DNSSenderThread::setTimeout(int seconds)
 {
 	timeout=seconds;
+}
+
+void DNSSenderThread::setDNSSECRate(int rate)
+{
+	DnssecRate=rate;
 }
 
 /*!\brief Gewünschte Query-Rate pro Sekunde einstellen
@@ -118,48 +122,22 @@ void DNSSenderThread::setZeitscheibe(float ms)
 }
 
 
-/*!\brief Antwortpakete ignorieren
- *
- * Falls gesetzt, werden nur Pakete rausgeschickt, die Antworten aber ignoriert
- *
- * @param flag True oder False
- */
-void DNSSenderThread::setIgnoreResponses(bool flag)
+void DNSSenderThread::setSourceIP(const ppl7::IPAddress &ip)
 {
-	ignoreResponses=flag;
+	sourceip=ip;
+	spoofingEnabled=false;
 }
 
-void DNSSenderThread::setSourceIP(const ppl7::String &ip)
+void DNSSenderThread::setSourceNet(const ppl7::IPNetwork &net)
 {
-	Socket.setSource(ip);
+	sourcenet=net;
+	spoofingEnabled=true;
 }
 
 void DNSSenderThread::setVerbose(bool verbose)
 {
 	this->verbose=verbose;
 }
-
-void DNSSenderThread::setAlwaysRandomize(bool flag)
-{
-	this->alwaysRandomize=flag;
-}
-
-bool DNSSenderThread::socketReady()
-{
-	fd_set wset;
-	struct timeval timeout;
-	timeout.tv_sec=0;
-	timeout.tv_usec=100;
-	FD_ZERO(&wset);
-	FD_SET(sockfd,&wset); // Wir wollen nur prüfen, ob wir schreiben können
-	int ret=select(sockfd+1,NULL,&wset,NULL,&timeout);
-	if (ret<0) return false;
-	if (FD_ISSET(sockfd,&wset)) {
-		return true;
-	}
-	return false;
-}
-
 
 
 /*!\brief Einzelnes Paket senden
@@ -171,17 +149,21 @@ bool DNSSenderThread::socketReady()
  */
 void DNSSenderThread::sendPacket()
 {
-	PACKET *p=(PACKET*)buffer.ptr();
-	if (alwaysRandomize) {
-		char *b=(char*)p;
-		for (size_t i=0;i<packetsize;i++) {
-			b[i]=(char)ppl7::rand(0,255);
-		}
+	ppl7::String query;
+	payload->getQuery(query);
+	if (DnssecRate==0) pkt.setPayloadDNSQuery(query,false);
+	else if (DnssecRate==100) pkt.setPayloadDNSQuery(query,true);
+	else {
+		pkt.setPayloadDNSQuery(query,true);
 	}
-	p->time=ppl7::GetMicrotime();
-	ssize_t n=::send(sockfd,p,packetsize,0);
-	if (n>0 && (size_t)n==packetsize) {
-		counter_send++;
+	if (spoofingEnabled) {
+		//pkt.randomSourcePort();
+	}
+	pkt.setDnsId(getQueryTimestamp());
+	ssize_t n=Socket.send(pkt);
+	if (n>0 && (size_t)n==pkt.size()) {
+		counter_packets_send++;
+		counter_bytes_send+=pkt.size();
 	} else if (n<0) {
 		if (errno<255) counter_errorcodes[errno]++;
 		errors++;
@@ -190,7 +172,7 @@ void DNSSenderThread::sendPacket()
 	}
 }
 
-#endif
+
 
 /*!\brief Worker-Thread
  *
@@ -203,16 +185,12 @@ void DNSSenderThread::sendPacket()
  */
 void DNSSenderThread::run()
 {
-#ifdef TODO
-	buffer=ppl7::Random(packetsize);
-	Socket.connect(destination);
-	Socket.setBlocking(false);
-	sockfd=Socket.getDescriptor();
-	receiver.setSocketDescriptor(sockfd);
-	receiver.resetCounter();
-	if (!ignoreResponses)
-		receiver.threadStart();
-	counter_send=0;
+	if (!payload) throw ppl7::NullPointerException("payload nicht gesetzt!");
+	if (!spoofingEnabled) {
+		pkt.setSource(sourceip,0x4567);
+	}
+	counter_packets_send=0;
+	counter_bytes_send=0;
 	counter_0bytes=0;
 	errors=0;
 	duration=0.0;
@@ -225,12 +203,8 @@ void DNSSenderThread::run()
 	}
 	duration=ppl7::GetMicrotime()-start;
 	waitForTimeout();
-	receiver.threadStop();
-	Socket.disconnect();
-#endif
 }
 
-#ifdef TODO
 
 /*!\brief Generiert und empfängt soviele Pakete wie möglich
  *
@@ -242,7 +216,7 @@ void DNSSenderThread::runWithoutRateLimit()
 	double end=start+(double)runtime;
 	double now,next_checktime=start+0.1;
 	while (1) {
-		if (socketReady()) {
+		if (Socket.socketReady()) {
 			sendPacket();
 		}
 		now=ppl7::GetMicrotime();
@@ -289,6 +263,7 @@ void DNSSenderThread::runWithRateLimit()
 	ppluint64 queries_rest=runtime*queryrate;
 	ppl7::SockAddr addr=Socket.getSockAddr();
 	if (verbose) {
+		//printf ("qps=%d, runtime=%d\n",queryrate, runtime);
 		printf ("Laufzeit: %d s, Dauer Zeitscheibe: %0.6f s, Zeitscheiben total: %llu, Qpzs: %llu, Source: %s:%d\n",
 				runtime,Zeitscheibe,total_zeitscheiben,
 				queries_rest/total_zeitscheiben,
@@ -360,25 +335,16 @@ void DNSSenderThread::waitForTimeout()
  */
 ppluint64 DNSSenderThread::getPacketsSend() const
 {
-	return counter_send;
+	return counter_packets_send;
 }
 
-/*!\brief Anzahl empfangender Pakete auslesen
- *
- * @return Anzahl Pakete
- */
-ppluint64 DNSSenderThread::getPacketsReceived() const
-{
-	return receiver.getPacketsReceived();
-}
-
-/*!\brief Anzahl empfangender Bytes auslesen
+/*!\brief Anzahl gesendeter Bytes auslesen
  *
  * @return Anzahl Bytes
  */
-ppluint64 DNSSenderThread::getBytesReceived() const
+ppluint64 DNSSenderThread::getBytesSend() const
 {
-	return receiver.getBytesReceived();
+	return counter_bytes_send;
 }
 
 /*!\brief Anzahl beim Senden aufgetretener Fehler auslesen
@@ -401,40 +367,3 @@ ppluint64 DNSSenderThread::getCounterErrorCode(int err) const
 	return 0;}
 
 
-/*!\brief Tatsächliche Laufzeit des Tests auslesen
- *
- * @return Laufzeit in Sekunden, mit mikrosekundengenauen Nachkommastellen
- */
-double DNSSenderThread::getDuration() const
-{
-	return duration;
-}
-
-/*!\brief Durchschnittliche Paketlaufzeit auslesen
- *
- * @return Laufzeit in Sekunden, mit mikrosekundengenauen Nachkommastellen
- */
-double DNSSenderThread::getRoundTripTimeAverage() const
-{
-	return receiver.getRoundTripTimeAverage();
-}
-
-/*!\brief Minimale Paketlaufzeit auslesen
- *
- * @return Laufzeit in Sekunden, mit mikrosekundengenauen Nachkommastellen
- */
-double DNSSenderThread::getRoundTripTimeMin() const
-{
-	return receiver.getRoundTripTimeMin();
-}
-
-/*!\brief Maximale Paketlaufzeit auslesen
- *
- * @return Laufzeit in Sekunden, mit mikrosekundengenauen Nachkommastellen
- */
-double DNSSenderThread::getRoundTripTimeMax() const
-{
-	return receiver.getRoundTripTimeMax();
-}
-
-#endif

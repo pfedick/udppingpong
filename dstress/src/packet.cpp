@@ -95,28 +95,41 @@ Packet::~Packet()
 	free(buffer);
 }
 
-void Packet::setSource(const ppl7::String &ip_addr, int port)
+void Packet::setSource(const ppl7::IPAddress &ip_addr, int port)
 {
 	struct ip *iphdr = (struct ip *)buffer;
 	struct udphdr *udp = (struct udphdr *)(buffer+ISZ);
-	iphdr->ip_src.s_addr = inet_addr(ip_addr);
+	iphdr->ip_src.s_addr = *(in_addr_t*)ip_addr.addr();
 	udp->source=htons(port);
 	chksum_valid=false;
 }
 
-void Packet::setDestination(const ppl7::String &ip_addr, int port)
+void Packet::randomSourcePort()
+{
+	struct udphdr *udp = (struct udphdr *)(buffer+ISZ);
+	udp->source=htons(ppl7::rand(1024,65535));
+	chksum_valid=false;
+}
+
+void Packet::setDestination(const ppl7::IPAddress &ip_addr, int port)
 {
 	struct ip *iphdr = (struct ip *)buffer;
 	struct udphdr *udp = (struct udphdr *)(buffer+ISZ);
-	iphdr->ip_dst.s_addr = inet_addr(ip_addr);
+	iphdr->ip_dst.s_addr = *(in_addr_t*)ip_addr.addr();
 	udp->dest=htons(port);
 	chksum_valid=false;
 }
 
-void Packet::setId(unsigned short id)
+void Packet::setIpId(unsigned short id)
 {
 	struct ip *iphdr = (struct ip *)buffer;
 	iphdr->ip_id  = htons(id);
+	chksum_valid=false;
+}
+
+void Packet::setDnsId(unsigned short id)
+{
+	*((unsigned short*)(buffer+HDRSZ))=htons(id);
 	chksum_valid=false;
 }
 
@@ -132,9 +145,9 @@ void Packet::setPayload(const void *payload, size_t size)
 	chksum_valid=false;
 }
 
-void Packet::setPayloadDNSQuery(const ppl7::String &query)
+void Packet::setPayloadDNSQuery(const ppl7::String &query, bool dnssec)
 {
-	payload_size=MakeQuery(query,buffer+HDRSZ,buffersize-HDRSZ, true);
+	payload_size=MakeQuery(query,buffer+HDRSZ,buffersize-HDRSZ, dnssec);
 	struct ip *iphdr = (struct ip *)buffer;
 	struct udphdr *udp = (struct udphdr *)(buffer+ISZ);
 	iphdr->ip_len=htons(HDRSZ+payload_size);
@@ -146,7 +159,9 @@ void Packet::updateChecksums()
 {
 	struct ip *iphdr = (struct ip *)buffer;
 	struct udphdr *udp = (struct udphdr *)(buffer+ISZ);
+	iphdr->ip_sum = 0;
 	iphdr->ip_sum = in_cksum((unsigned short*)iphdr,ISZ);
+	udp->check=0;
 	udp->check=udp_cksum(iphdr,udp,buffer+HDRSZ,payload_size);
 	chksum_valid=true;
 }

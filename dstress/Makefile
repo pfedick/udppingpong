@@ -13,6 +13,7 @@ OBJECTS = build/main.o \
 	build/mkquery.o \
 	build/rawsocket.o \
 	build/DNSSenderThread.o \
+	build/payload.o \
 	build/packet.o  
 
 all: dstress
@@ -37,6 +38,10 @@ build/packet.o: src/packet.cpp Makefile include/dstress.h ../CommonLib/include/u
 build/rawsocket.o: src/rawsocket.cpp Makefile include/dstress.h ../CommonLib/include/udpecho.h
 	mkdir -p build
 	$(CXX) $(CFLAGS) -o build/rawsocket.o -c src/rawsocket.cpp
+
+build/payload.o: src/payload.cpp Makefile include/dstress.h ../CommonLib/include/udpecho.h
+	mkdir -p build
+	$(CXX) $(CFLAGS) -o build/payload.o -c src/payload.cpp
 
 build/DNSSenderThread.o: src/DNSSenderThread.cpp Makefile include/dstress.h ../CommonLib/include/udpecho.h
 	mkdir -p build

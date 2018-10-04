@@ -58,3 +58,18 @@ ppl7::SockAddr RawSocket::getSockAddr() const
 	return ppl7::SockAddr(buffer, sizeof(struct sockaddr_in));
 }
 
+bool RawSocket::socketReady()
+{
+	fd_set wset;
+	struct timeval timeout;
+	timeout.tv_sec=0;
+	timeout.tv_usec=100;
+	FD_ZERO(&wset);
+	FD_SET(sd,&wset); // Wir wollen nur prüfen, ob wir schreiben können
+	int ret=select(sd+1,NULL,&wset,NULL,&timeout);
+	if (ret<0) return false;
+	if (FD_ISSET(sd,&wset)) {
+		return true;
+	}
+	return false;
+}

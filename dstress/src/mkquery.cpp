@@ -83,6 +83,7 @@ int MakeQuery(const ppl7::String &query, unsigned char *buffer, size_t buffersiz
 			dns->ad=1;
 			dns->add_count=htons(1);
 			DNS_OPT *opt=(DNS_OPT*)(buffer+bytes);
+			memset(opt,0,11);
 			opt->type=htons(41);
 			opt->udp_payload_size=htons(udp_payload_size);
 			opt->z=htons(0x8000);	// DO-bit
