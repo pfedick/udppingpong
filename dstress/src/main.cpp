@@ -13,7 +13,7 @@
 
 #include <list>
 
-
+#include <dnsperftest_sensor.h>
 #include "dstress.h"
 
 int oldmain(int argc, char **argv);
@@ -77,8 +77,16 @@ int main(int argc, char**argv)
 #ifdef __FreeBSD__
 	//return freebsd_main();
 #endif
+	SystemStat sys1, sys2;
 	DNSSender Sender;
-	return Sender.main(argc,argv);
+	sampleSensorData(sys1);
+	//sys1.print();
+	int ret=Sender.main(argc,argv);
+	if (ret==0) {
+		sampleSensorData(sys2);
+		//sys2.print();
+	}
+	return ret;
 }
 
 
