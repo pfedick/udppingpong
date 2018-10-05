@@ -37,13 +37,30 @@ void DNSReceiverThread::setSource(const ppl7::IPAddress &ip, int port)
 
 void DNSReceiverThread::run()
 {
-	double start=ppl7::GetMicrotime();
-	double now,next_checktime=start+0.1;
 	size_t size;
 	double rtt;
 	counter_packets_received=0;
 	counter_bytes_received=0;
 	min_rtt=max_rtt=total_rtt=0.0f;
+#ifdef __FreeBSD__
+	int ccc=0;
+	while (1) {
+		ccc++;
+		if (ccc>100000) {
+			ccc=0;
+			if (this->threadShouldStop()) return;
+		}
+		if (Socket.receive(size,rtt)) {
+			counter_packets_received++;
+			counter_bytes_received+=size;
+			total_rtt+=rtt;
+			if (rtt>max_rtt) max_rtt=rtt;
+			if (rtt<min_rtt || min_rtt==0.0f) min_rtt=rtt;
+		}
+	}
+#else
+	double start=ppl7::GetMicrotime();
+	double now,next_checktime=start+0.1;
 	while (1) {
 		if (Socket.socketReady()) {
 			if (Socket.receive(size,rtt)) {
@@ -60,6 +77,7 @@ void DNSReceiverThread::run()
 			if (this->threadShouldStop()) break;
 		}
 	}
+#endif
 }
 
 ppluint64 DNSReceiverThread::getPacketsReceived() const

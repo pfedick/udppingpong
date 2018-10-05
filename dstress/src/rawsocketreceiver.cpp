@@ -22,6 +22,8 @@
 #include <net/if.h>
 #include <net/bpf.h>
 #include <net/ethernet.h>
+#include <machine/atomic.h>
+#define ZBUF_SIZE 8192
 #endif
 
 #include "dstress.h"
@@ -61,32 +63,96 @@ RawSocketReceiver::RawSocketReceiver()
 	SourceIP.set("0.0.0.0");
 	SourcePort=0;
 	buflen=4096;
-	buffer=(unsigned char*)malloc(buflen);
-	if (!buffer) throw ppl7::OutOfMemoryException();
 	sd=-1;
 	pkt_count=valid_pkg_count=0;
+	buffer=NULL;
+#ifdef __FreeBSD__
+	sd=open_bpf();
+	buffer=(unsigned char*)malloc(sizeof(struct bpf_zbuf));
+	if (!buffer) { close(sd); throw ppl7::OutOfMemoryException();}
+	struct bpf_zbuf *zbuf=(struct bpf_zbuf*)buffer;
+	
+	unsigned int bufmode=BPF_BUFMODE_ZBUF;
+	if (ioctl(sd, BIOCSETBUFMODE, &bufmode) < 0) {
+		int e=errno;
+                close(sd);
+		free(buffer);
+                ppl7::throwExceptionFromErrno(e,"BIOCSETBUFMODE with BPF_BUFMODE_ZBUF failed");
+        }
+
+	size_t zbufsize=0;
+	if (ioctl(sd, BIOCGETZMAX, &zbufsize) < 0) {
+		int e=errno;
+                close(sd);
+		free(buffer);
+                ppl7::throwExceptionFromErrno(e,"BIOCGETZMAX");
+        }
+	printf ("zbufsize: %td\n",zbufsize);
+	zbuf->bz_buflen=ZBUF_SIZE;
+	zbuf->bz_bufa=malloc(ZBUF_SIZE);
+	if (!zbuf->bz_bufa) {
+                close(sd);
+		free(buffer);
+		throw ppl7::OutOfMemoryException();
+	}
+	zbuf->bz_bufb=malloc(ZBUF_SIZE);
+	if (!zbuf->bz_bufb) {
+                close(sd);
+		free(zbuf->bz_bufa);
+		free(buffer);
+		throw ppl7::OutOfMemoryException();
+	}
+	memset(zbuf->bz_bufa,0,ZBUF_SIZE);
+	memset(zbuf->bz_bufb,0,ZBUF_SIZE);
+
+	if (ioctl(sd, BIOCSETZBUF, zbuf) < 0) {
+		int e=errno;
+                close(sd);
+		free(zbuf->bz_bufa);
+		free(zbuf->bz_bufb);
+		free(buffer);
+                ppl7::throwExceptionFromErrno(e,"BIOCGETZMAX");
+        }
+
+	
+#else
+	buffer=(unsigned char*)malloc(buflen);
+	if (!buffer) throw ppl7::OutOfMemoryException();
+	if ((sd = socket(AF_PACKET, SOCK_RAW, htons(0x0800))) == -1) {
+		int e=errno;
+		free(buffer);
+		ppl7::throwExceptionFromErrno(e,"Could not create RawReceiverSocket");
+	}
+#endif
 }
 
 RawSocketReceiver::~RawSocketReceiver()
 {
 	close(sd);
 	free(buffer);
+#ifdef __FreeBSD__
+	if (sd>0) {
+		struct bpf_stat bs;
+		if (ioctl(sd, BIOCGSTATS, &bs) >=0 ) {
+			printf ("BPF: bs_recv=%d, bs_drop=%d\n",bs.bs_recv, bs.bs_drop);
+	
+		}
+	}
+#endif
 	printf ("RawSocketReceiver::~RawSocketReceiver: pkt_count=%lld, valid_pkg_count=%lld\n",
 		pkt_count, valid_pkg_count);
 }
 
 void RawSocketReceiver::initInterface(const ppl7::String &Device)
 {
-	if (sd>=0) close(sd);
-	sd=-1;
 #ifdef __FreeBSD__
-	sd=open_bpf();
 	struct ifreq ifreq;
 	strcpy((char *) ifreq.ifr_name, (const char*)Device);
 	if (ioctl(sd, BIOCSETIF, &ifreq) < 0) {
 		close(sd);
 		ppl7::throwExceptionFromErrno(errno,"Could not bind RawReceiverSocket on interface (BIOCSETIF)");
 	}
+	/*
 	ioctl(sd, BIOCGBLEN, &buflen);
 	printf ("buflen=%d\n",buflen);
 	unsigned int tmp = 1;
@@ -95,23 +161,19 @@ void RawSocketReceiver::initInterface(const ppl7::String &Device)
 		ppl7::throwExceptionFromErrno(errno,"BIOCIMMEDIATE failed");
 	}
 	struct timeval timeout;
-	timeout.tv_sec = 5;
+	timeout.tv_sec = 1;
 	timeout.tv_usec = 0;
 	if (ioctl(sd, BIOCSRTIMEOUT, (struct timeval *) &timeout) < 0) {
 		close(sd);
 		ppl7::throwExceptionFromErrno(errno,"BIOCSRTIMEOUT failed");
 	}
 
-	buffer=(unsigned char*)malloc(65536);
-	if (!buffer) {
-		close(sd);
-		throw ppl7::OutOfMemoryException();
-	}
-#else
-	if ((sd = socket(AF_PACKET, SOCK_RAW, htons(0x0800))) == -1) {
-		free(buffer);
-		ppl7::throwExceptionFromErrno(errno,"Could not create RawReceiverSocket");
-	}
+	int direction=BPF_D_IN;
+	if (ioctl(sd, BIOCGDIRECTION, &direction) < 0) {
+                close(sd);
+                ppl7::throwExceptionFromErrno(errno,"BIOCGDIRECTION failed");
+        }
+	*/
 #endif
 }
 
@@ -167,14 +229,53 @@ bool RawSocketReceiver::socketReady()
 #endif
 }
 
+#ifdef __FreeBSD__
+/*
+      *	Return ownership of a buffer to	the kernel for reuse.
+      */
+     static void
+     buffer_acknowledge(struct bpf_zbuf_header *bzh)
+     {
+
+	     atomic_store_rel_int(&bzh->bzh_user_gen, bzh->bzh_kernel_gen);
+     }
+
+static int
+     buffer_check(struct bpf_zbuf_header *bzh)
+     {
+
+	     return (bzh->bzh_user_gen !=
+		 atomic_load_acq_int(&bzh->bzh_kernel_gen));
+     }
+#endif
+
 bool RawSocketReceiver::receive(size_t &size, double &rtt)
 {
 #ifdef __FreeBSD__
-	ssize_t bufused=read(sd,buffer,buflen);
+	struct bpf_zbuf *zbuf=(struct bpf_zbuf*)buffer;
+	struct bpf_zbuf_header *zhdr=NULL;
+	if (buffer_check((struct bpf_zbuf_header *)zbuf->bz_bufa)) {
+		zhdr=((struct bpf_zbuf_header *)zbuf->bz_bufa);
+	} else if (buffer_check((struct bpf_zbuf_header *)zbuf->bz_bufb)) {
+		zhdr=((struct bpf_zbuf_header *)zbuf->bz_bufb);
+	
+	} else return false;
+	size=zhdr->bzh_kernel_len-sizeof(struct bpf_zbuf_header);
+	printf ("size=%td\n",size);
+	unsigned char *ptr=(unsigned char *)zhdr+sizeof(struct bpf_zbuf_header);
+	ppl7::HexDump(ptr,size);
+
+	buffer_acknowledge(zhdr);
+
+	int bufused=0;
+	pkt_count++;
+	size=buflen;
+	rtt=0.0f;
+	return true;
 	if (bufused < sizeof(struct bpf_hdr)) return false;
 	pkt_count++;
 	struct bpf_hdr *bpf=(struct bpf_hdr *)buffer;
-	unsigned char *ptr=buffer+bpf->bh_hdrlen; 
+	ptr=buffer+bpf->bh_hdrlen; 
 	bufused-=bpf->bh_hdrlen;
 #else
 	unsigned char *ptr=buffer;

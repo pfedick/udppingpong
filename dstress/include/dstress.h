@@ -98,6 +98,7 @@ private:
 	int sd;
 	unsigned short SourcePort;
 	ppluint64 pkt_count, valid_pkg_count;
+
 public:
 	RawSocketReceiver();
 	~RawSocketReceiver();
