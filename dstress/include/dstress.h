@@ -20,6 +20,7 @@ PPL7EXCEPTION(BufferOverflow, Exception);
 PPL7EXCEPTION(UnknownDestination, Exception);
 PPL7EXCEPTION(InvalidQueryFile, Exception);
 PPL7EXCEPTION(UnsupportedIPFamily, Exception);
+PPL7EXCEPTION(FailedToInitializePacketfilter, Exception);
 
 struct DNS_HEADER
 {
@@ -96,6 +97,7 @@ private:
 	int buflen;
 	int sd;
 	unsigned short SourcePort;
+	ppluint64 pkt_count, valid_pkg_count;
 public:
 	RawSocketReceiver();
 	~RawSocketReceiver();

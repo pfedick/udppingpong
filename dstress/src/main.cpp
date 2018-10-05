@@ -77,16 +77,8 @@ int main(int argc, char**argv)
 #ifdef __FreeBSD__
 	//return freebsd_main();
 #endif
-	SystemStat sys1, sys2;
 	DNSSender Sender;
-	sampleSensorData(sys1);
-	//sys1.print();
-	int ret=Sender.main(argc,argv);
-	if (ret==0) {
-		sampleSensorData(sys2);
-		//sys2.print();
-	}
-	return ret;
+	return Sender.main(argc,argv);
 }
 
 
@@ -390,6 +382,8 @@ void DNSSender::run(int queryrate)
 	for (it=threadpool.begin();it!=threadpool.end();++it) {
 		((DNSSenderThread*)(*it))->setQueryRate(queryrate/ThreadCount);
 	}
+	SystemStat sys1,sys2;
+	sampleSensorData(sys1);
 	Receiver.threadStart();
 	threadpool.startThreads();
 	ppl7::MSleep(500);
@@ -397,6 +391,16 @@ void DNSSender::run(int queryrate)
 		ppl7::MSleep(100);
 	}
 	Receiver.threadStop();
+	sampleSensorData(sys2);
+	const SystemStat::Interface &net1=sys1.interfaces["igb3"];
+	const SystemStat::Interface &net2=sys2.interfaces["igb3"];
+	SystemStat::Network transmit=SystemStat::Network::getDelta(net1.transmit, net2.transmit);
+	SystemStat::Network received=SystemStat::Network::getDelta(net1.receive, net2.receive);
+	printf ("Bytes transmit:   %lu\n",transmit.bytes);
+	printf ("Packets transmit: %lu\n",transmit.packets);
+	printf ("Bytes received:   %lu\n",received.bytes);
+	printf ("Packets received: %lu\n",received.packets);
+
 	if (stopFlag==true) {
 		threadpool.stopThreads();
 		throw ppl7::OperationInterruptedException("Lasttest wurde abgebrochen");
