@@ -47,7 +47,7 @@ struct DNS_HEADER
 
 int MakeQuery(const ppl7::String &query, unsigned char *buffer, size_t buffersize, bool dnssec=false, int udp_payload_size=4096);
 unsigned short getQueryTimestamp();
-unsigned short getQueryRTT(unsigned short start);
+double getQueryRTT(unsigned short start);
 
 class Packet
 {
@@ -97,7 +97,6 @@ private:
 	int buflen;
 	int sd;
 	unsigned short SourcePort;
-	ppluint64 pkt_count, valid_pkg_count;
 
 public:
 	RawSocketReceiver();
@@ -105,7 +104,11 @@ public:
 	void initInterface(const ppl7::String &Device);
 	bool socketReady();
 	void setSource(const ppl7::IPAddress &ip_addr, int port);
+#ifdef __FreeBSD__
+	void receive(ppluint64 &num_pkgs, ppluint64 &bytes_rcv, double &rtt, double &min, double &max);
+#else
 	bool receive(size_t &size, double &rtt);
+#endif
 };
 
 
@@ -178,6 +181,7 @@ class DNSSender
 		ppl7::String QueryFilename;
 		ppl7::File CSVFile;
 		ppl7::Array rates;
+		ppl7::String InterfaceName;
 		PayloadFile payload;
 		DNSReceiverThread Receiver;
 

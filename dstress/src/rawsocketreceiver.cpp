@@ -48,7 +48,6 @@ static int open_bpf()
 		Device.setf("/dev/bpf%d", i);
 		sd=open((const char*)Device, O_RDWR);
 		if (sd>=0) {
-			printf("opened %s\n",(const char*)Device);
 			return sd;
 		}
 	}
@@ -64,7 +63,6 @@ RawSocketReceiver::RawSocketReceiver()
 	SourcePort=0;
 	buflen=4096;
 	sd=-1;
-	pkt_count=valid_pkg_count=0;
 	buffer=NULL;
 #ifdef __FreeBSD__
 	sd=open_bpf();
@@ -75,19 +73,26 @@ RawSocketReceiver::RawSocketReceiver()
 	unsigned int bufmode=BPF_BUFMODE_ZBUF;
 	if (ioctl(sd, BIOCSETBUFMODE, &bufmode) < 0) {
 		int e=errno;
-                close(sd);
+		close(sd);
 		free(buffer);
-                ppl7::throwExceptionFromErrno(e,"BIOCSETBUFMODE with BPF_BUFMODE_ZBUF failed");
-        }
+		ppl7::throwExceptionFromErrno(e,"BIOCSETBUFMODE with BPF_BUFMODE_ZBUF failed");
+	}
 
+	/*
 	size_t zbufsize=0;
 	if (ioctl(sd, BIOCGETZMAX, &zbufsize) < 0) {
 		int e=errno;
-                close(sd);
+		close(sd);
 		free(buffer);
-                ppl7::throwExceptionFromErrno(e,"BIOCGETZMAX");
-        }
-	printf ("zbufsize: %td\n",zbufsize);
+		ppl7::throwExceptionFromErrno(e,"BIOCGETZMAX");
+	}*/
+	unsigned int tstype=BPF_T_MICROTIME;
+	if (ioctl(sd, BIOCSTSTAMP, &tstype) < 0) {
+		int e=errno;
+		close(sd);
+		free(buffer);
+		ppl7::throwExceptionFromErrno(e,"BIOCSTSTAMP");
+	}
 	zbuf->bz_buflen=ZBUF_SIZE;
 	zbuf->bz_bufa=malloc(ZBUF_SIZE);
 	if (!zbuf->bz_bufa) {
@@ -129,18 +134,12 @@ RawSocketReceiver::RawSocketReceiver()
 RawSocketReceiver::~RawSocketReceiver()
 {
 	close(sd);
-	free(buffer);
 #ifdef __FreeBSD__
-	if (sd>0) {
-		struct bpf_stat bs;
-		if (ioctl(sd, BIOCGSTATS, &bs) >=0 ) {
-			printf ("BPF: bs_recv=%d, bs_drop=%d\n",bs.bs_recv, bs.bs_drop);
-	
-		}
-	}
+	struct bpf_zbuf *zbuf=(struct bpf_zbuf*)buffer;
+	free(zbuf->bz_bufa);
+	free(zbuf->bz_bufb);
 #endif
-	printf ("RawSocketReceiver::~RawSocketReceiver: pkt_count=%lld, valid_pkg_count=%lld\n",
-		pkt_count, valid_pkg_count);
+	free(buffer);
 }
 
 void RawSocketReceiver::initInterface(const ppl7::String &Device)
@@ -149,31 +148,8 @@ void RawSocketReceiver::initInterface(const ppl7::String &Device)
 	struct ifreq ifreq;
 	strcpy((char *) ifreq.ifr_name, (const char*)Device);
 	if (ioctl(sd, BIOCSETIF, &ifreq) < 0) {
-		close(sd);
 		ppl7::throwExceptionFromErrno(errno,"Could not bind RawReceiverSocket on interface (BIOCSETIF)");
 	}
-	/*
-	ioctl(sd, BIOCGBLEN, &buflen);
-	printf ("buflen=%d\n",buflen);
-	unsigned int tmp = 1;
-	if (ioctl(sd, BIOCIMMEDIATE, &tmp) < 0) {
-		close(sd);
-		ppl7::throwExceptionFromErrno(errno,"BIOCIMMEDIATE failed");
-	}
-	struct timeval timeout;
-	timeout.tv_sec = 1;
-	timeout.tv_usec = 0;
-	if (ioctl(sd, BIOCSRTIMEOUT, (struct timeval *) &timeout) < 0) {
-		close(sd);
-		ppl7::throwExceptionFromErrno(errno,"BIOCSRTIMEOUT failed");
-	}
-
-	int direction=BPF_D_IN;
-	if (ioctl(sd, BIOCGDIRECTION, &direction) < 0) {
-                close(sd);
-                ppl7::throwExceptionFromErrno(errno,"BIOCGDIRECTION failed");
-        }
-	*/
 #endif
 }
 
@@ -182,16 +158,24 @@ void RawSocketReceiver::setSource(const ppl7::IPAddress &ip_addr, int port)
 	SourceIP=ip_addr;
 	SourcePort=htons(port);
 #ifdef __FreeBSD__
+	// Install packet filter in bpf
 	int sip=htonl(*(int*)SourceIP.addr());
 	struct bpf_insn insns[] = {
-		/* load halfword at position 12 from packet into register */
+		// load halfword at position 12 from packet into register
 		BPF_STMT(BPF_LD+BPF_H+BPF_ABS, 12),
-		/* is it 0x800? if no, jump over 5 instructions, else jump over 0 */
-		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, 0x0800, 0, 5),
+		// is it 0x800? if no, jump over 5 instructions, else jump over 0
+		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, 0x0800, 0, 7),
+		// source ip
 		BPF_STMT(BPF_LD+BPF_W+BPF_ABS, 26),
-		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, sip, 0, 3),
+		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, (unsigned int)sip, 0, 5),
+
+		// udp?
+		BPF_STMT(BPF_LD+BPF_B+BPF_ABS, 23),
+		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, 17, 0, 3),
+
+		// source port
 		BPF_STMT(BPF_LD+BPF_H+BPF_ABS, 34),
-		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, port, 0, 1),
+		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, (unsigned int)port, 0, 1),
 
 		/* if we reach here, return -1 which will allow the packet to be read */
 		BPF_STMT(BPF_RET+BPF_K, (u_int)-1),
@@ -199,7 +183,7 @@ void RawSocketReceiver::setSource(const ppl7::IPAddress &ip_addr, int port)
 		BPF_STMT(BPF_RET+BPF_K, 0),
 	};
 	struct bpf_program bpf_program = {
-		8,
+		10,
 		(struct bpf_insn *) &insns
 	};
 	if (ioctl(sd, BIOCSETF, (struct bpf_program *) &bpf_program) < 0) {
@@ -231,56 +215,61 @@ bool RawSocketReceiver::socketReady()
 
 #ifdef __FreeBSD__
 /*
-      *	Return ownership of a buffer to	the kernel for reuse.
-      */
-     static void
-     buffer_acknowledge(struct bpf_zbuf_header *bzh)
-     {
-
-	     atomic_store_rel_int(&bzh->bzh_user_gen, bzh->bzh_kernel_gen);
-     }
-
-static int
-     buffer_check(struct bpf_zbuf_header *bzh)
-     {
-
-	     return (bzh->bzh_user_gen !=
-		 atomic_load_acq_int(&bzh->bzh_kernel_gen));
-     }
-#endif
-
-bool RawSocketReceiver::receive(size_t &size, double &rtt)
+ *	Return ownership of a buffer to	the kernel for reuse.
+ */
+static void buffer_acknowledge(struct bpf_zbuf_header *bzh)
 {
-#ifdef __FreeBSD__
+	atomic_store_rel_int(&bzh->bzh_user_gen, bzh->bzh_kernel_gen);
+}
+
+static int buffer_check(struct bpf_zbuf_header *bzh)
+{
+	return (bzh->bzh_user_gen !=
+			atomic_load_acq_int(&bzh->bzh_kernel_gen));
+}
+
+static void read_zbuffer(struct bpf_zbuf_header *zhdr, ppluint64 &num_pkgs, ppluint64 &bytes_rcv, double &rtt, double &min, double &max)
+{
+	size_t size=zhdr->bzh_kernel_len-sizeof(struct bpf_zbuf_header);
+	//size_t size=zhdr->bzh_kernel_len;
+	unsigned char *ptr=(unsigned char *)zhdr+sizeof(struct bpf_zbuf_header);
+	size_t done=0;
+	while (done<size) {
+		struct bpf_hdr* bpfh=(struct bpf_hdr*)ptr;
+		if (bpfh->bh_caplen==0 || bpfh->bh_hdrlen==0) break;
+		size_t chunk_size=BPF_WORDALIGN(bpfh->bh_caplen+bpfh->bh_hdrlen);
+		num_pkgs++;
+		bytes_rcv+=bpfh->bh_datalen;
+		struct DNS_HEADER *dns=(struct DNS_HEADER *)(ptr+bpfh->bh_hdrlen+14+sizeof(struct ip)+sizeof(struct udphdr));
+		double rd=getQueryRTT(ntohs(dns->id));
+		rtt+=rd;
+		if (rd<min || min==0) min=rd;
+		if (rd>max) max=rd;
+
+		ptr+=chunk_size;
+		done+=chunk_size;
+	}
+	buffer_acknowledge(zhdr);
+}
+void RawSocketReceiver::receive(ppluint64 &num_pkgs, ppluint64 &bytes_rcv, double &rtt, double &min, double &max)
+{
 	struct bpf_zbuf *zbuf=(struct bpf_zbuf*)buffer;
 	struct bpf_zbuf_header *zhdr=NULL;
 	if (buffer_check((struct bpf_zbuf_header *)zbuf->bz_bufa)) {
 		zhdr=((struct bpf_zbuf_header *)zbuf->bz_bufa);
-	} else if (buffer_check((struct bpf_zbuf_header *)zbuf->bz_bufb)) {
+		read_zbuffer(zhdr, num_pkgs, bytes_rcv, rtt, min, max);
+	}
+	if (buffer_check((struct bpf_zbuf_header *)zbuf->bz_bufb)) {
 		zhdr=((struct bpf_zbuf_header *)zbuf->bz_bufb);
-	
-	} else return false;
-	size=zhdr->bzh_kernel_len-sizeof(struct bpf_zbuf_header);
-	printf ("size=%td\n",size);
-	unsigned char *ptr=(unsigned char *)zhdr+sizeof(struct bpf_zbuf_header);
-	ppl7::HexDump(ptr,size);
+		read_zbuffer(zhdr, num_pkgs, bytes_rcv, rtt, min, max);
+	}
+}
 
-	buffer_acknowledge(zhdr);
-
-	int bufused=0;
-	pkt_count++;
-	size=buflen;
-	rtt=0.0f;
-	return true;
-	if (bufused < sizeof(struct bpf_hdr)) return false;
-	pkt_count++;
-	struct bpf_hdr *bpf=(struct bpf_hdr *)buffer;
-	ptr=buffer+bpf->bh_hdrlen; 
-	bufused-=bpf->bh_hdrlen;
 #else
+bool RawSocketReceiver::receive(size_t &size, double &rtt)
+{
 	unsigned char *ptr=buffer;
 	ssize_t bufused=recvfrom(sd,buffer,buflen,0,NULL,NULL);
-#endif
 	if (bufused<34) return false;
 	struct ETHER *eth=(struct ETHER*)ptr;
 	//ppl7::HexDump(ptr,bufused);
@@ -292,14 +281,11 @@ bool RawSocketReceiver::receive(size_t &size, double &rtt)
 
 	struct udphdr *udp = (struct udphdr *)(ptr+14+sizeof(struct ip));
 	if (udp->uh_sport!=SourcePort) return false;
-	valid_pkg_count++;
 	size=bufused-sizeof(struct ETHER);
 
 	struct DNS_HEADER *dns=(struct DNS_HEADER *)(ptr+14+sizeof(struct ip)+sizeof(struct udphdr));
 
-	unsigned short r=getQueryRTT(ntohs(dns->id));
-	if (r>60000) return false;
-	rtt=(double)r/1000.0f;
+	rtt=getQueryRTT(ntohs(dns->id));
 	return true;
 }
-
+#endif

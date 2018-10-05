@@ -45,16 +45,17 @@ unsigned short getQueryTimestamp()
 {
 	struct timeval tp;
 	if (gettimeofday(&tp,NULL)==0) {
-		return (tp.tv_sec%60)*1000+(tp.tv_usec/1000);
+		return (tp.tv_sec%6)*10000+(tp.tv_usec/100);
 	}
 	return 0;
 }
 
-unsigned short getQueryRTT(unsigned short start)
+double getQueryRTT(unsigned short start)
 {
 	unsigned short now=getQueryTimestamp();
-	if (now<start) return 60000-start+now;
-	return now-start;
+	unsigned short diff=now-start;
+	if (now<start) diff=60000-start+now;
+	return (double)(diff)/10000.0f;
 }
 
 
@@ -202,14 +203,13 @@ int DNSSender::getParameter(int argc, char**argv)
 		help();
 		return 1;
 	}
-	ppl7::String eth;
 	if (ppl7::HaveArgv(argc,argv,"-e")) {
-		eth=ppl7::GetArgv(argc,argv,"-e");
+		InterfaceName=ppl7::GetArgv(argc,argv,"-e");
 	}
 	try {
-		Receiver.setInterface(eth);
+		Receiver.setInterface(InterfaceName);
 	} catch (const ppl7::Exception &e) {
-                printf ("ERROR: Konnte nicht an Device binden [%s]\n",(const char*)eth);
+                printf ("ERROR: Konnte nicht an Device binden [%s]\n",(const char*)InterfaceName);
                 e.print();
                 printf ("\n");
                 help();
@@ -392,14 +392,12 @@ void DNSSender::run(int queryrate)
 	}
 	Receiver.threadStop();
 	sampleSensorData(sys2);
-	const SystemStat::Interface &net1=sys1.interfaces["igb3"];
-	const SystemStat::Interface &net2=sys2.interfaces["igb3"];
+	const SystemStat::Interface &net1=sys1.interfaces[InterfaceName];
+	const SystemStat::Interface &net2=sys2.interfaces[InterfaceName];
 	SystemStat::Network transmit=SystemStat::Network::getDelta(net1.transmit, net2.transmit);
 	SystemStat::Network received=SystemStat::Network::getDelta(net1.receive, net2.receive);
-	printf ("Bytes transmit:   %lu\n",transmit.bytes);
-	printf ("Packets transmit: %lu\n",transmit.packets);
-	printf ("Bytes received:   %lu\n",received.bytes);
-	printf ("Packets received: %lu\n",received.packets);
+	printf ("Netzwerk Packets transmit: %lu, received: %lu, Bytes transmit: %lu, received: %lu\n",
+			transmit.packets, received.packets, transmit.bytes, received.bytes);
 
 	if (stopFlag==true) {
 		threadpool.stopThreads();
@@ -483,30 +481,32 @@ void DNSSender::saveResultsToCsv(const DNSSender::Results &result)
  */
 void DNSSender::presentResults(const DNSSender::Results &result)
 {
-	ppluint64 qps_send=(ppluint64)((double)result.counter_send/result.duration);
-	ppluint64 bps_send=(ppluint64)((double)result.bytes_send/result.duration);
-	ppluint64 qps_received=(ppluint64)((double)result.counter_received/result.duration);
-	ppluint64 bps_received=(ppluint64)((double)result.bytes_received/result.duration);
-	ppluint64 bytes_received=(ppluint64)((double)result.bytes_received/result.duration);
+	//printf ("result.counter_send=%llu, duration=%0.3f\n", result.counter_send, result.duration);
+	ppluint64 qps_send=(ppluint64)((double)result.counter_send/(double)Laufzeit);
+	ppluint64 bps_send=(ppluint64)((double)result.bytes_send/(double)Laufzeit);
+	ppluint64 qps_received=(ppluint64)((double)result.counter_received/(double)Laufzeit);
+	ppluint64 bps_received=(ppluint64)((double)result.bytes_received/(double)Laufzeit);
+
 	printf ("Bytes send:       %10llu, Durchsatz: %10llu MBit\n",result.bytes_send,
 			bps_send/(1024*1024));
 	printf ("Bytes received:   %10llu, Durchsatz: %10llu MBit\n",result.bytes_received,
 			bps_received/(1024*1024));
 
-	printf ("Packets send:     %10llu, Qps: %10llu, Durchsatz: %10llu MBit\n",result.counter_send,
-			qps_send,
-			qps_send*1*8/(1024*1024));
-	printf ("Packets received: %10llu, Qps: %10llu, Durchsatz: %10llu MBit\n",result.counter_received,
-			qps_received,
-			bytes_received*8/(1024*1024));
+	printf ("Packets send:     %10llu, Qps: %10llu\n",result.counter_send,
+			qps_send);
+	printf ("Packets received: %10llu, Qps: %10llu\n",result.counter_received,
+			qps_received);
 	printf ("Packets lost:     %10llu = %0.3f %%\n",result.packages_lost,
 			(double)result.packages_lost*100.0/(double)result.counter_send);
 
-	printf ("Errors:           %10llu, Qps: %10llu\n",result.counter_errors,
-			(ppluint64)((double)result.counter_errors/result.duration));
-
-	printf ("Errors 0Byte:     %10llu, Qps: %10llu\n",result.counter_0bytes,
-			(ppluint64)((double)result.counter_0bytes/result.duration));
+	if (result.counter_errors) {
+		printf ("Errors:           %10llu, Qps: %10llu\n",result.counter_errors,
+				(ppluint64)((double)result.counter_errors/result.duration));
+	}
+	if (result.counter_0bytes) {
+		printf ("Errors 0Byte:     %10llu, Qps: %10llu\n",result.counter_0bytes,
+				(ppluint64)((double)result.counter_0bytes/result.duration));
+	}
 	for (int i=0;i<255;i++) {
 		if (result.counter_errorcodes[i]>0) {
 			printf ("Errors %3d:       %10llu, Qps: %10llu [%s]\n",i, result.counter_errorcodes[i],
@@ -530,7 +530,7 @@ void DNSSender::presentResults(const DNSSender::Results &result)
 
 int oldmain(int argc, char **argv)
 {
-	DNSSender Sender;
+
 
 	return 0;
 }
@@ -542,9 +542,9 @@ int freebsd_main()
 	RawSocketReceiver Receiver;
 	Receiver.initInterface("igb3");
 	Receiver.setSource(ppl7::IPAddress("192.168.13.30"),53);
-	size_t size;
-	double rtt;
-	while (!Receiver.receive(size,rtt)) {};
+	//size_t size;
+	//double rtt;
+	//while (!Receiver.receive(size,rtt)) {};
 	return 0;
 } 
 #endif	// __FreeBSD__
