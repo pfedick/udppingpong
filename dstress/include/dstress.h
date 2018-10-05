@@ -93,11 +93,13 @@ class RawSocketReceiver
 private:
 	ppl7::IPAddress SourceIP;
 	unsigned char *buffer;
+	int buflen;
 	int sd;
 	unsigned short SourcePort;
 public:
 	RawSocketReceiver();
 	~RawSocketReceiver();
+	void initInterface(const ppl7::String &Device);
 	bool socketReady();
 	void setSource(const ppl7::IPAddress &ip_addr, int port);
 	bool receive(size_t &size, double &rtt);
@@ -130,6 +132,7 @@ class DNSReceiverThread : public ppl7::Thread
 	public:
 		DNSReceiverThread();
 		~DNSReceiverThread();
+		void setInterface(const ppl7::String &Device);
 		void setSource(const ppl7::IPAddress &ip, int port);
 		void run();
 

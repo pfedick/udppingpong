@@ -17,6 +17,7 @@
 #include "dstress.h"
 
 int oldmain(int argc, char **argv);
+int freebsd_main();
 
 
 /*!\brief Stop-Flag
@@ -73,6 +74,9 @@ int main(int argc, char**argv)
 	// setting the following options:
 	_res.options|=RES_USE_EDNS0;
 	_res.options|=RES_USE_DNSSEC;
+#ifdef __FreeBSD__
+	//return freebsd_main();
+#endif
 	DNSSender Sender;
 	return Sender.main(argc,argv);
 }
@@ -90,6 +94,7 @@ void DNSSender::help()
 			"                werden soll (siehe -s)\n"
 			"  -s NETWORK    Spoofe den Absender. Random-IP aus dem gegebenen Netz\n"
 			"                (Beispiel: 192.168.0.0/16). Erfordert root-Rechte!\n"
+			"  -e ETH        Interface, auf dem der Receiver lauschen soll (nur FreeBSD)\n"
 			"  -z HOST:PORT  Hostname oder IP und Port des Zielservers\n"
 			"  -p FILE       Datei mit Queries/Payload\n"
 			"  -l #          Laufzeit in Sekunden (Default=10 Sekunden)\n"
@@ -197,12 +202,25 @@ int DNSSender::getParameter(int argc, char**argv)
 		help();
 		return 1;
 	}
+	ppl7::String eth;
+	if (ppl7::HaveArgv(argc,argv,"-e")) {
+		eth=ppl7::GetArgv(argc,argv,"-e");
+	}
+	try {
+		Receiver.setInterface(eth);
+	} catch (const ppl7::Exception &e) {
+                printf ("ERROR: Konnte nicht an Device binden [%s]\n",(const char*)eth);
+                e.print();
+                printf ("\n");
+                help();
+                return 1;
+        } 
 
 	try {
 		getTarget(argc, argv);
 		getSource(argc, argv);
 	} catch (const ppl7::Exception &e) {
-		printf ("ERROR: Feghlender oder fehlerhafter Parameter\n");
+		printf ("ERROR: Fehlender oder fehlerhafter Parameter\n");
 		e.print();
 		printf ("\n");
 		help();
@@ -504,6 +522,20 @@ int oldmain(int argc, char **argv)
 
 	return 0;
 }
+
+
+#ifdef __FreeBSD__
+int freebsd_main()
+{
+	RawSocketReceiver Receiver;
+	Receiver.initInterface("igb3");
+	Receiver.setSource(ppl7::IPAddress("192.168.13.30"),53);
+	size_t size;
+	double rtt;
+	while (!Receiver.receive(size,rtt)) {};
+	return 0;
+} 
+#endif	// __FreeBSD__
 
 #ifdef OLD
 

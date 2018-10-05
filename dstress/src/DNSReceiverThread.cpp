@@ -25,6 +25,11 @@ DNSReceiverThread::~DNSReceiverThread()
 
 }
 
+void DNSReceiverThread::setInterface(const ppl7::String &Device)
+{
+	Socket.initInterface(Device);
+}
+
 void DNSReceiverThread::setSource(const ppl7::IPAddress &ip, int port)
 {
 	Socket.setSource(ip, port);
