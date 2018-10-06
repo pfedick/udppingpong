@@ -7,7 +7,7 @@
 
 #ifndef DSTRESS_INCLUDE_DSTRESS_H_
 #define DSTRESS_INCLUDE_DSTRESS_H_
-
+#include <list>
 #include <ppl7.h>
 #include <ppl7-inet.h>
 #include "dnsperftest_sensor.h"
@@ -47,6 +47,7 @@ struct DNS_HEADER
 
 
 int MakeQuery(const ppl7::String &query, unsigned char *buffer, size_t buffersize, bool dnssec=false, int udp_payload_size=4096);
+int AddDnssecToQuery(unsigned char *buffer, size_t buffersize, int querysize, int udp_payload_size=4096);
 unsigned short getQueryTimestamp();
 double getQueryRTT(unsigned short start);
 
@@ -124,10 +125,14 @@ private:
 	ppl7::File QueryFile;
 	ppl7::Mutex QueryMutex;
 	ppluint64 validLinesInQueryFile;
+	std::list<ppl7::ByteArray> querycache;
+	std::list<ppl7::ByteArray>::const_iterator it;
+
+	void precache(ppl7::File &ff);
 public:
 	PayloadFile();
 	void openQueryFile(const ppl7::String &Filename);
-	void getQuery(ppl7::String &buffer);
+	const ppl7::ByteArrayPtr getQuery();
 };
 
 class DNSReceiverThread : public ppl7::Thread
@@ -219,6 +224,7 @@ class DNSSender
 		void getSource(int argc, char**argv);
 		int getParameter(int argc, char**argv);
 		int openFiles();
+		void calcZeitscheibe(int queryrate);
 
 		void showCurrentStats(ppl7::ppl_time_t start_time);
 
@@ -234,7 +240,6 @@ DNSSender::Results operator-(const DNSSender::Results &first, const DNSSender::R
 class DNSSenderThread : public ppl7::Thread
 {
 	private:
-		ppl7::ByteArray buffer;
 		RawSocketSender Socket;
 		Packet pkt;
 
@@ -243,6 +248,7 @@ class DNSSenderThread : public ppl7::Thread
 		ppl7::IPNetwork sourcenet;
 
 		PayloadFile *payload;
+		unsigned char *buffer;
 		ppluint64 queryrate;
 		ppluint64 counter_packets_send, errors, counter_0bytes;
 		ppluint64 counter_bytes_send;

@@ -12,12 +12,14 @@ static const char *rr_types[] = {
 		"A", "NS", "MD", "MF", "CNAME", "SOA", "MB", "MG",
 		"MR", "NULL", "WKS", "PTR", "HINFO", "MINFO", "MX", "TXT",
 		"AAAA", "SRV", "NAPTR", "A6", "TKEY", "IXFR", "AXFR", "MAILB", "MAILA", "*", "ANY", "DS",
+		"SPF",
 		NULL
 };
 static int rr_code[] = {
 		1, 2, 3, 4, 5, 6, 7, 8, \
 		9, 10, 11, 12, 13, 14, 15, 16, \
-		28, 33, 35, 38, 249, 251, 252, 253, 254, 255, 255, 43 \
+		28, 33, 35, 38, 249, 251, 252, 253, 254, 255, 255, 43,
+		99, \
 };
 
 
@@ -55,19 +57,23 @@ int MakeQuery(const ppl7::String &query, unsigned char *buffer, size_t buffersiz
 					NULL,0,NULL,buffer,(int)buffersize);
 			if (bytes<0) throw InvalidDNSQuery("%s", hstrerror(h_errno));
 			if (!dnssec) return bytes;
-			//buffer[3]|=32;
-			DNS_HEADER *dns=(DNS_HEADER*)buffer;
-			dns->ad=1;
-			dns->add_count=htons(1);
-			DNS_OPT *opt=(DNS_OPT*)(buffer+bytes);
-			memset(opt,0,11);
-			opt->type=htons(41);
-			opt->udp_payload_size=htons(udp_payload_size);
-			opt->z=htons(0x8000);	// DO-bit
-			return bytes+11;
+			return AddDnssecToQuery(buffer,buffersize,bytes,udp_payload_size);
 		}
 		t++;
 	}
 	throw UnknownRRType(tok[1]);
+}
+
+int AddDnssecToQuery(unsigned char *buffer, size_t buffersize, int querysize, int udp_payload_size)
+{
+	DNS_HEADER *dns=(DNS_HEADER*)buffer;
+	dns->ad=1;
+	dns->add_count=htons(1);
+	DNS_OPT *opt=(DNS_OPT*)(buffer+querysize);
+	memset(opt,0,11);
+	opt->type=htons(41);
+	opt->udp_payload_size=htons(udp_payload_size);
+	opt->z=htons(0x8000);	// DO-bit
+	return querysize+11;
 }
 

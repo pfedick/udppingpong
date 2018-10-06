@@ -102,8 +102,6 @@ void DNSSender::help()
 			"                Kann auch eine Kommaseparierte Liste sein (rate,rate,...) oder eine\n"
 			"                Range (von rate - bis rate, Schrittweite)\n"
 			"  -d #          DNSSEC-Anteil in Prozent von 0-100 (Default=0)\n"
-			"  -i #          Länge einer Zeitscheibe in Millisekunden (nur in Kombination mit -r, Default=1)\n"
-			"                Wert muss zwischen 1 und 1000 liegen und \"1000/Wert\" muss aufgehen\n"
 			"  -c FILE       CSV-File fuer Ergebnisse\n"
 			"  --ignore      Ignoriere die Antworten\n"
 			"\n");
@@ -283,7 +281,6 @@ int DNSSender::getParameter(int argc, char**argv)
 	Timeout = ppl7::GetArgv(argc,argv,"-t").toInt();
 	ThreadCount = ppl7::GetArgv(argc,argv,"-n").toInt();
 	ppl7::String QueryRates = ppl7::GetArgv(argc,argv,"-r");
-	Zeitscheibe = ppl7::GetArgv(argc,argv,"-i").toFloat();
 	CSVFileName = ppl7::GetArgv(argc,argv,"-c");
 	QueryFilename = ppl7::GetArgv(argc,argv,"-p");
 	if (ppl7::HaveArgv(argc,argv,"-d")) {
@@ -302,7 +299,6 @@ int DNSSender::getParameter(int argc, char**argv)
 		help();
 		return 1;
 	}
-	if (Zeitscheibe==0.0f) Zeitscheibe=1.0f;
 	rates = getQueryRates(QueryRates);
 	return 0;
 }
@@ -453,6 +449,14 @@ void DNSSender::showCurrentStats(ppl7::ppl_time_t start_time)
 }
 
 
+void DNSSender::calcZeitscheibe(int queryrate)
+{
+	Zeitscheibe=(1000.0f/queryrate)*ThreadCount;
+	//if (Zeitscheibe<1.0f) Zeitscheibe=1.0f;
+	if (Zeitscheibe<0.1f) Zeitscheibe=0.1f;
+}
+
+
 /*!\brief Last generieren
  *
  * Konfiguriert die Workerthreads mit der gewünschten Last \p queryrate, startet sie und wartet,
@@ -462,12 +466,19 @@ void DNSSender::showCurrentStats(ppl7::ppl_time_t start_time)
 void DNSSender::run(int queryrate)
 {
 	printf ("###############################################################################\n");
-	printf ("# Start Session with Threads: %d, Queryrate: %d\n",
-			ThreadCount,queryrate);
+	if (queryrate) {
+		calcZeitscheibe(queryrate);
+		printf ("# Start Session with Threads: %d, Queryrate: %d, Timeslot: %0.6f ms\n",
+				ThreadCount,queryrate, Zeitscheibe);
+	} else {
+		printf ("# Start Session with Threads: %d, Queryrate: unlimited\n",
+				ThreadCount);
+	}
 
 	ppl7::ThreadPool::iterator it;
 	for (it=threadpool.begin();it!=threadpool.end();++it) {
 		((DNSSenderThread*)(*it))->setQueryRate(queryrate/ThreadCount);
+		((DNSSenderThread*)(*it))->setZeitscheibe(Zeitscheibe);
 	}
 	vis_prev_results.clear();
 	sampleSensorData(sys1);
@@ -607,112 +618,3 @@ void DNSSender::presentResults(const DNSSender::Results &result)
 
 }
 
-/*!\class DNSSender::Results
- * \brief Datenobjekt zur Aufnahme der Ergebnisse eines Lasttests
- */
-
-int oldmain(int argc, char **argv)
-{
-
-
-	return 0;
-}
-
-
-#ifdef __FreeBSD__
-int freebsd_main()
-{
-	RawSocketReceiver Receiver;
-	Receiver.initInterface("igb3");
-	Receiver.setSource(ppl7::IPAddress("192.168.13.30"),53);
-	//size_t size;
-	//double rtt;
-	//while (!Receiver.receive(size,rtt)) {};
-	return 0;
-} 
-#endif	// __FreeBSD__
-
-#ifdef OLD
-
-	RawSocket sock;
-	sock.setDestination(ppl7::IPAddress("148.251.94.99"),53);
-	ppl7::SockAddr sadr=sock.getSockAddr();
-	printf ("%s:%d\n",(const char*)sadr.toIPAddress().toString(), sadr.port());
-
-	return 0;
-
-	int sock_r;
-	sock_r=socket(AF_PACKET,SOCK_RAW,htons(0x0800));
-	if(sock_r<0)
-	{
-		printf("error in socket\n");
-		return -1;
-	}
-	res_init();
-
-	// For unknown reason, res_mkquery is much slower (factor 3) when not
-	// setting the following options:
-	_res.options|=RES_USE_EDNS0;
-	_res.options|=RES_USE_DNSSEC;
-
-	unsigned char *buffer = (unsigned char *) malloc(65536); //to receive data
-	memset(buffer,0,65536);
-	struct sockaddr saddr;
-	int saddr_len = sizeof (saddr);
-
-	double start=ppl7::GetMicrotime();
-	Packet pkt;
-	pkt.setDestination("148.251.94.99",53);
-	pkt.setSource("10.122.65.210",0x8000);
-	//pkt.setSource("148.251.94.99",0x8000);
-	pkt.setUdpId(1234);
-
-	for (int i=0;i<1000000;i++) {
-		pkt.setSource("10.122.65.210",0x8000);
-		pkt.setPayloadDNSQuery("pfp.de SOA");
-		pkt.setUdpId(1234);
-
-	}
-
-	double duration=ppl7::GetMicrotime()-start;
-
-	printf ("duration: %0.3f\n",duration);
-	return 0;
-
-
-	try {
-		RawSocket sock;
-		sock.setDestination(ppl7::IPAddress("148.251.94.99"),53);
-
-		Packet pkt;
-		pkt.setDestination("148.251.94.99",53);
-		pkt.setSource("10.122.65.210",0x8000);
-		//pkt.setSource("148.251.94.99",0x8000);
-		pkt.setUdpId(1234);
-		pkt.setPayloadDNSQuery("pfp.de SOA");
-
-		ppl7::HexDump(pkt.ptr(),pkt.size());
-
-		int bytes=sock.send(pkt);
-		printf ("%d bytes gesendet\n",bytes);
-
-		int buflen=recvfrom(sock_r,buffer,65536,0,&saddr,(socklen_t *)&saddr_len);
-		if(buflen<0)
-		{
-			printf("error in reading recvfrom function\n");
-			return -1;
-		}
-		printf ("Antwort: %d\n",saddr.sa_family);
-		ppl7::HexDump(buffer,buflen);
-
-
-		ppl7::HexDump(&saddr,saddr_len);
-		return 0;
-
-	} catch (const ppl7::Exception &exp) {
-		exp.print();
-		return 1;
-	}
-}
-
-#endif

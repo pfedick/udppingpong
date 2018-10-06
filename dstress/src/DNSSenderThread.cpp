@@ -19,6 +19,8 @@
  */
 DNSSenderThread::DNSSenderThread()
 {
+	buffer=(unsigned char*)malloc(4096);
+	if (!buffer) throw ppl7::OutOfMemoryException();
 	Zeitscheibe=0.0f;
 	runtime=10;
 	timeout=5;
@@ -44,7 +46,7 @@ DNSSenderThread::DNSSenderThread()
  */
 DNSSenderThread::~DNSSenderThread()
 {
-
+	free(buffer);
 }
 
 
@@ -155,30 +157,41 @@ void DNSSenderThread::setVerbose(bool verbose)
  */
 void DNSSenderThread::sendPacket()
 {
-	ppl7::String query;
-	payload->getQuery(query);
-	dnsseccounter+=DnssecRate;
-	if (dnsseccounter<100) pkt.setPayloadDNSQuery(query,false);
-	else {
-		pkt.setPayloadDNSQuery(query,true);
-		dnsseccounter-=100;
-	}
-	if (spoofingEnabled) {
-		pkt.randomSourceIP(spoofing_net_start, spoofing_net_size);
-		pkt.randomSourcePort();
-	}
-	pkt.setDnsId(getQueryTimestamp());
-	ssize_t n=Socket.send(pkt);
-	if (n>0 && (size_t)n==pkt.size()) {
-		counter_packets_send++;
-		counter_bytes_send+=pkt.size();
-	} else if (n<0) {
-		if (errno<255) counter_errorcodes[errno]++;
-		errors++;
-	} else {
-		counter_0bytes++;
+	ppl7::ByteArrayPtr bap;
+	size_t query_size;
+	while (1) {
+		try {
+			bap=payload->getQuery();
+			query_size=bap.size();
+			memcpy(buffer,bap.ptr(),query_size);
+			dnsseccounter+=DnssecRate;
+			if (dnsseccounter>=100) {
+				query_size=AddDnssecToQuery(buffer,4096,query_size);
+				dnsseccounter-=100;
+			}
+			pkt.setPayload(buffer,query_size);
+			if (spoofingEnabled) {
+				pkt.randomSourceIP(spoofing_net_start, spoofing_net_size);
+				pkt.randomSourcePort();
+			}
+			pkt.setDnsId(getQueryTimestamp());
+			ssize_t n=Socket.send(pkt);
+			if (n>0 && (size_t)n==pkt.size()) {
+				counter_packets_send++;
+				counter_bytes_send+=pkt.size();
+			} else if (n<0) {
+				if (errno<255) counter_errorcodes[errno]++;
+				errors++;
+			} else {
+				counter_0bytes++;
+			}
+			return;
+		} catch (const UnknownRRType &exp) {
+		} catch (const InvalidDNSQuery &exp) {
+		}
 	}
 }
+
 
 
 
@@ -223,17 +236,17 @@ void DNSSenderThread::runWithoutRateLimit()
 {
 	double start=ppl7::GetMicrotime();
 	double end=start+(double)runtime;
-	double now,next_checktime=start+0.1;
+	double now;
+	int pc=0;
 	while (1) {
-		if (Socket.socketReady()) {
-			sendPacket();
-		}
-		now=ppl7::GetMicrotime();
-		if (now>next_checktime) {
-			next_checktime=now+0.1;
+		sendPacket();
+		pc++;
+		if (pc>10000) {
+			pc=0;
 			if (this->threadShouldStop()) break;
+			now=ppl7::GetMicrotime();
+			if (now>end) break;
 		}
-		if (now>end) break;
 	}
 }
 
@@ -271,6 +284,7 @@ void DNSSenderThread::runWithRateLimit()
 	ppluint64 total_zeitscheiben=runtime*1000/(Zeitscheibe*1000.0);
 	ppluint64 queries_rest=runtime*queryrate;
 	ppl7::SockAddr addr=Socket.getSockAddr();
+	verbose=true;
 	if (verbose) {
 		//printf ("qps=%d, runtime=%d\n",queryrate, runtime);
 		printf ("Laufzeit: %d s, Dauer Zeitscheibe: %0.6f s, Zeitscheiben total: %llu, Qpzs: %llu, Source: %s:%d\n",
