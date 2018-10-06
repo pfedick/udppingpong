@@ -13,6 +13,7 @@
 #include <arpa/inet.h>
 #include <arpa/nameser.h>
 #include <resolv.h>
+#include <math.h>
 
 
 #include "dstress.h"
@@ -108,6 +109,15 @@ void Packet::randomSourcePort()
 {
 	struct udphdr *udp = (struct udphdr *)(buffer+ISZ);
 	udp->uh_sport=htons(ppl7::rand(1024,65535));
+	chksum_valid=false;
+}
+
+void Packet::randomSourceIP(const ppl7::IPNetwork &net)
+{
+	struct ip *iphdr = (struct ip *)buffer;
+	in_addr_t start=ntohl(*(in_addr_t*)net.first().addr());
+	size_t size=powl(2,32-net.prefixlen());
+	iphdr->ip_src.s_addr = htonl(ppl7::rand(start,start+size-1));
 	chksum_valid=false;
 }
 

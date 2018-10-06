@@ -69,6 +69,7 @@ public:
 	void setDnsId(unsigned short id);
 	void setIpId(unsigned short id);
 
+	void randomSourceIP(const ppl7::IPNetwork &net);
 	void randomSourcePort();
 
 	size_t size() const;

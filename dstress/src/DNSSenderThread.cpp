@@ -159,7 +159,8 @@ void DNSSenderThread::sendPacket()
 		dnsseccounter-=100;
 	}
 	if (spoofingEnabled) {
-		//pkt.randomSourcePort();
+		pkt.randomSourceIP(sourcenet);
+		pkt.randomSourcePort();
 	}
 	pkt.setDnsId(getQueryTimestamp());
 	ssize_t n=Socket.send(pkt);
