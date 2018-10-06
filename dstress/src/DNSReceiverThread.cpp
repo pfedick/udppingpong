@@ -41,18 +41,15 @@ void DNSReceiverThread::run()
 	counter_bytes_received=0;
 	min_rtt=max_rtt=total_rtt=0.0f;
 #ifdef __FreeBSD__
-	int ccc=0;
 	while (1) {
-		ccc++;
-		if (ccc>100000) {
-			ccc=0;
-			if (this->threadShouldStop()) return;
+		if (Socket.socketReady()) {
+			Socket.receive(counter_packets_received,
+					counter_bytes_received,
+					total_rtt,
+					min_rtt,
+					max_rtt);
 		}
-		Socket.receive(counter_packets_received,
-				counter_bytes_received,
-				total_rtt,
-				min_rtt,
-				max_rtt);
+		if (this->threadShouldStop()) break;
 	}
 #else
 	size_t size;

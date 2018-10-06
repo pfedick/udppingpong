@@ -87,15 +87,20 @@ void initZeroCopyBuffer(int sd, struct bpf_zbuf *zbuf)
 	if (ioctl(sd, BIOCSTSTAMP, &tstype) < 0) {
 		ppl7::throwExceptionFromErrno(errno,"BIOCSTSTAMP");
 	}
-
-	size_t zbufsize=0;
-	if (ioctl(sd, BIOCGETZMAX, &zbufsize) < 0) {
-		ppl7::throwExceptionFromErrno(errno,"BIOCGETZMAX");
-	}
-
 	if (tryAllocZeroCopyBuffer(sd, zbuf, 8192)) return;
 	if (tryAllocZeroCopyBuffer(sd, zbuf, 4096)) return;
 	throw FailedToInitializePacketfilter("Could not configure ZeroCopy-Buffer (BIOCSETZBUF)");
+}
+
+void initBufferedMode(int sd, unsigned int buflen)
+{
+	unsigned int bufmode=BPF_BUFMODE_BUFFER;
+	if (ioctl(sd, BIOCSETBUFMODE, &bufmode) < 0) {
+		ppl7::throwExceptionFromErrno(errno,"BIOCSETBUFMODE with BPF_BUFMODE_BUFFER failed");
+	}
+	if (ioctl(sd, BIOCSBLEN, &buflen) < 0) {
+		ppl7::throwExceptionFromErrno(errno,"BIOCSBLEN failed");
+	}
 }
 
 #endif
@@ -113,21 +118,31 @@ RawSocketReceiver::RawSocketReceiver()
 	buffer=(unsigned char*)malloc(sizeof(struct bpf_zbuf));
 	if (!buffer) { close(sd); throw ppl7::OutOfMemoryException();}
 	struct bpf_zbuf *zbuf=(struct bpf_zbuf*)buffer;
+
 	try {
 		initZeroCopyBuffer(sd,zbuf);
 		useZeroCopyBuffer=true;
 		buflen=zbuf->bz_buflen;
+		printf("INFO: using fast bpf zero copy buffer for packet capturing\n");
 		return;
 	} catch (const ppl7::Exception &ex) {
 		useZeroCopyBuffer=false;
 		free(buffer);
-		close(sd);
+	}
+	buflen=8192;
+	buffer=(unsigned char*)malloc(buflen);
+	if (!buffer) { close(sd); throw ppl7::OutOfMemoryException();}
+	try {
+		initBufferedMode(sd, buflen);
+		printf("INFO: using normal bpf buffered mode for packet capturing\n");
+		int ret=fcntl(sd,F_SETFL,fcntl(sd,F_GETFL,0)|O_NONBLOCK);// NON-Blocking
+		if (ret<0) ppl7::throwExceptionFromErrno(errno, "Could not set bpf into non blocking mode");
 
-		// TODO: Buffered Mode
+	} catch (const ppl7::Exception &ex) {
+		free(buffer);
+		close(sd);
 		throw;
 	}
-
-
 	
 #else
 	buffer=(unsigned char*)malloc(buflen);
@@ -137,6 +152,14 @@ RawSocketReceiver::RawSocketReceiver()
 		free(buffer);
 		ppl7::throwExceptionFromErrno(e,"Could not create RawReceiverSocket");
 	}
+	int ret=fcntl(sd,F_SETFL,fcntl(sd,F_GETFL,0)|O_NONBLOCK);// NON-Blocking
+	if (ret<0) {
+		int e=errno;
+		close(sd);
+		free(buffer);
+		ppl7::throwExceptionFromErrno(e, "Could not set bpf into non blocking mode");
+	}
+
 #endif
 }
 
@@ -144,9 +167,11 @@ RawSocketReceiver::~RawSocketReceiver()
 {
 	close(sd);
 #ifdef __FreeBSD__
-	struct bpf_zbuf *zbuf=(struct bpf_zbuf*)buffer;
-	free(zbuf->bz_bufa);
-	free(zbuf->bz_bufb);
+	if (useZeroCopyBuffer) {
+		struct bpf_zbuf *zbuf=(struct bpf_zbuf*)buffer;
+		free(zbuf->bz_bufa);
+		free(zbuf->bz_bufb);
+	}
 #endif
 	free(buffer);
 }
@@ -158,6 +183,10 @@ void RawSocketReceiver::initInterface(const ppl7::String &Device)
 	strcpy((char *) ifreq.ifr_name, (const char*)Device);
 	if (ioctl(sd, BIOCSETIF, &ifreq) < 0) {
 		ppl7::throwExceptionFromErrno(errno,"Could not bind RawReceiverSocket on interface (BIOCSETIF)");
+	}
+	unsigned int promiscuous_mode=1;
+	if (ioctl(sd, BIOCPROMISC, &promiscuous_mode) < 0) {
+		ppl7::throwExceptionFromErrno(errno,"Could not set Interface into promiscuous mode (BIOCPROMISC)");
 	}
 #endif
 }
@@ -205,8 +234,8 @@ void RawSocketReceiver::setSource(const ppl7::IPAddress &ip_addr, int port)
 bool RawSocketReceiver::socketReady()
 {
 #ifdef __FreeBSD__
-	return true;
-#else
+	//if (useZeroCopyBuffer) return true;
+#endif
 	fd_set rset;
 	struct timeval timeout;
 	timeout.tv_sec=0;
@@ -219,7 +248,6 @@ bool RawSocketReceiver::socketReady()
 		return true;
 	}
 	return false;
-#endif
 }
 
 #ifdef __FreeBSD__
@@ -237,11 +265,8 @@ static int buffer_check(struct bpf_zbuf_header *bzh)
 			atomic_load_acq_int(&bzh->bzh_kernel_gen));
 }
 
-static void read_zbuffer(struct bpf_zbuf_header *zhdr, ppluint64 &num_pkgs, ppluint64 &bytes_rcv, double &rtt, double &min, double &max)
+static void read_buffer(unsigned char *ptr, size_t size, ppluint64 &num_pkgs, ppluint64 &bytes_rcv, double &rtt, double &min, double &max)
 {
-	size_t size=zhdr->bzh_kernel_len-sizeof(struct bpf_zbuf_header);
-	//size_t size=zhdr->bzh_kernel_len;
-	unsigned char *ptr=(unsigned char *)zhdr+sizeof(struct bpf_zbuf_header);
 	size_t done=0;
 	while (done<size) {
 		struct bpf_hdr* bpfh=(struct bpf_hdr*)ptr;
@@ -258,19 +283,32 @@ static void read_zbuffer(struct bpf_zbuf_header *zhdr, ppluint64 &num_pkgs, pplu
 		ptr+=chunk_size;
 		done+=chunk_size;
 	}
+}
+
+static void read_zbuffer(struct bpf_zbuf_header *zhdr, ppluint64 &num_pkgs, ppluint64 &bytes_rcv, double &rtt, double &min, double &max)
+{
+	size_t size=zhdr->bzh_kernel_len-sizeof(struct bpf_zbuf_header);
+	unsigned char *ptr=(unsigned char *)zhdr+sizeof(struct bpf_zbuf_header);
+	read_buffer(ptr,size,num_pkgs,bytes_rcv,rtt,min,max);
 	buffer_acknowledge(zhdr);
 }
 void RawSocketReceiver::receive(ppluint64 &num_pkgs, ppluint64 &bytes_rcv, double &rtt, double &min, double &max)
 {
-	struct bpf_zbuf *zbuf=(struct bpf_zbuf*)buffer;
-	struct bpf_zbuf_header *zhdr=NULL;
-	if (buffer_check((struct bpf_zbuf_header *)zbuf->bz_bufa)) {
-		zhdr=((struct bpf_zbuf_header *)zbuf->bz_bufa);
-		read_zbuffer(zhdr, num_pkgs, bytes_rcv, rtt, min, max);
-	}
-	if (buffer_check((struct bpf_zbuf_header *)zbuf->bz_bufb)) {
-		zhdr=((struct bpf_zbuf_header *)zbuf->bz_bufb);
-		read_zbuffer(zhdr, num_pkgs, bytes_rcv, rtt, min, max);
+	if (useZeroCopyBuffer) {
+		struct bpf_zbuf *zbuf=(struct bpf_zbuf*)buffer;
+		struct bpf_zbuf_header *zhdr=NULL;
+		if (buffer_check((struct bpf_zbuf_header *)zbuf->bz_bufa)) {
+			zhdr=((struct bpf_zbuf_header *)zbuf->bz_bufa);
+			read_zbuffer(zhdr, num_pkgs, bytes_rcv, rtt, min, max);
+		}
+		if (buffer_check((struct bpf_zbuf_header *)zbuf->bz_bufb)) {
+			zhdr=((struct bpf_zbuf_header *)zbuf->bz_bufb);
+			read_zbuffer(zhdr, num_pkgs, bytes_rcv, rtt, min, max);
+		}
+	} else {
+		ssize_t bufused=read(sd,buffer,buflen);
+		if (bufused<34) return;
+		read_buffer(buffer,bufused, num_pkgs, bytes_rcv, rtt, min, max);
 	}
 }
 
