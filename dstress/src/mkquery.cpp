@@ -9,17 +9,19 @@
 #include "dstress.h"
 
 static const char *rr_types[] = {
-		"A", "NS", "MD", "MF", "CNAME", "SOA", "MB", "MG",
-		"MR", "NULL", "WKS", "PTR", "HINFO", "MINFO", "MX", "TXT",
-		"AAAA", "SRV", "NAPTR", "A6", "TKEY", "IXFR", "AXFR", "MAILB", "MAILA", "*", "ANY", "DS",
-		"SPF",
+		"A", "AAAA", "MX", "NS", "DS", "DNSKEY", "TXT", "SOA", "NAPTR", "RRSIG",
+		"NSEC", "NSEC3", "NSEC3PARAM", "PTR", "SRV",
+		"CNAME","TSIG","*","ANY","AXFR","IXFR",
+		"SPF", "A6", "HINFO", "WKS", "NULL",
 		NULL
 };
+
 static int rr_code[] = {
-		1, 2, 3, 4, 5, 6, 7, 8, \
-		9, 10, 11, 12, 13, 14, 15, 16, \
-		28, 33, 35, 38, 249, 251, 252, 253, 254, 255, 255, 43,
-		99, \
+		1,28,15,2,43,48,16,6,35,46,
+		47,50,51,12,33,
+		5,250,255,255,252,251,
+		99,38,13,11,10,
+		0
 };
 
 
@@ -61,6 +63,7 @@ int MakeQuery(const ppl7::String &query, unsigned char *buffer, size_t buffersiz
 		}
 		t++;
 	}
+	//printf ("unknown rrtype: >>%s<<\n",(const char*)tok[1]);
 	throw UnknownRRType(tok[1]);
 }
 
