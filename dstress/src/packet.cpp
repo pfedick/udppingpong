@@ -121,6 +121,13 @@ void Packet::randomSourceIP(const ppl7::IPNetwork &net)
 	chksum_valid=false;
 }
 
+void Packet::randomSourceIP(unsigned int start, unsigned int size)
+{
+	struct ip *iphdr = (struct ip *)buffer;
+	iphdr->ip_src.s_addr = htonl(ppl7::rand(start,start+size-1));
+	chksum_valid=false;
+}
+
 void Packet::setDestination(const ppl7::IPAddress &ip_addr, int port)
 {
 	struct ip *iphdr = (struct ip *)buffer;

@@ -9,6 +9,7 @@
 #include <arpa/inet.h>
 #include <arpa/nameser.h>
 #include <resolv.h>
+#include <math.h>
 
 #include "dstress.h"
 
@@ -33,6 +34,8 @@ DNSSenderThread::DNSSenderThread()
 	DnssecRate=0;
 	dnsseccounter=0;
 	payload=NULL;
+	spoofing_net_start=0;
+	spoofing_net_size=0;
 }
 
 /*!\brief Destruktor
@@ -133,6 +136,8 @@ void DNSSenderThread::setSourceNet(const ppl7::IPNetwork &net)
 {
 	sourcenet=net;
 	spoofingEnabled=true;
+	spoofing_net_start=ntohl(*(in_addr_t*)net.first().addr());
+	spoofing_net_size=powl(2,32-net.prefixlen());
 }
 
 void DNSSenderThread::setVerbose(bool verbose)
@@ -159,7 +164,7 @@ void DNSSenderThread::sendPacket()
 		dnsseccounter-=100;
 	}
 	if (spoofingEnabled) {
-		pkt.randomSourceIP(sourcenet);
+		pkt.randomSourceIP(spoofing_net_start, spoofing_net_size);
 		pkt.randomSourcePort();
 	}
 	pkt.setDnsId(getQueryTimestamp());

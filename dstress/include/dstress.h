@@ -70,6 +70,7 @@ public:
 	void setIpId(unsigned short id);
 
 	void randomSourceIP(const ppl7::IPNetwork &net);
+	void randomSourceIP(unsigned int start, unsigned int size);
 	void randomSourcePort();
 
 	size_t size() const;
@@ -246,6 +247,10 @@ class DNSSenderThread : public ppl7::Thread
 		ppluint64 counter_packets_send, errors, counter_0bytes;
 		ppluint64 counter_bytes_send;
 		ppluint64 counter_errorcodes[255];
+
+		unsigned int spoofing_net_start;
+		unsigned int spoofing_net_size;
+
 		int runtime;
 		int timeout;
 		int DnssecRate;
