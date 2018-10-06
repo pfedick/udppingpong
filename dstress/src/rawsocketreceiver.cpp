@@ -23,7 +23,6 @@
 #include <net/bpf.h>
 #include <net/ethernet.h>
 #include <machine/atomic.h>
-#define ZBUF_SIZE 8192
 #endif
 
 #include "dstress.h"
@@ -55,6 +54,50 @@ static int open_bpf()
 	return -1;
 }
 
+bool tryAllocZeroCopyBuffer(int sd, struct bpf_zbuf *zbuf, size_t size)
+{
+	zbuf->bz_buflen=size;
+	zbuf->bz_bufa=malloc(zbuf->bz_buflen);
+	if (!zbuf->bz_bufa) {
+		throw ppl7::OutOfMemoryException();
+	}
+	zbuf->bz_bufb=malloc(zbuf->bz_buflen);
+	if (!zbuf->bz_bufb) {
+		free(zbuf->bz_bufa);
+		throw ppl7::OutOfMemoryException();
+	}
+	memset(zbuf->bz_bufa,0,zbuf->bz_buflen);
+	memset(zbuf->bz_bufb,0,zbuf->bz_buflen);
+
+	if (ioctl(sd, BIOCSETZBUF, zbuf) < 0) {
+		free(zbuf->bz_bufa);
+		free(zbuf->bz_bufb);
+		return false;
+	}
+	return true;
+}
+
+void initZeroCopyBuffer(int sd, struct bpf_zbuf *zbuf)
+{
+	unsigned int bufmode=BPF_BUFMODE_ZBUF;
+	if (ioctl(sd, BIOCSETBUFMODE, &bufmode) < 0) {
+		ppl7::throwExceptionFromErrno(errno,"BIOCSETBUFMODE with BPF_BUFMODE_ZBUF failed");
+	}
+	unsigned int tstype=BPF_T_MICROTIME;
+	if (ioctl(sd, BIOCSTSTAMP, &tstype) < 0) {
+		ppl7::throwExceptionFromErrno(errno,"BIOCSTSTAMP");
+	}
+
+	size_t zbufsize=0;
+	if (ioctl(sd, BIOCGETZMAX, &zbufsize) < 0) {
+		ppl7::throwExceptionFromErrno(errno,"BIOCGETZMAX");
+	}
+
+	if (tryAllocZeroCopyBuffer(sd, zbuf, 8192)) return;
+	if (tryAllocZeroCopyBuffer(sd, zbuf, 4096)) return;
+	throw FailedToInitializePacketfilter("Could not configure ZeroCopy-Buffer (BIOCSETZBUF)");
+}
+
 #endif
 
 RawSocketReceiver::RawSocketReceiver()
@@ -65,59 +108,25 @@ RawSocketReceiver::RawSocketReceiver()
 	sd=-1;
 	buffer=NULL;
 #ifdef __FreeBSD__
+	useZeroCopyBuffer=false;
 	sd=open_bpf();
 	buffer=(unsigned char*)malloc(sizeof(struct bpf_zbuf));
 	if (!buffer) { close(sd); throw ppl7::OutOfMemoryException();}
 	struct bpf_zbuf *zbuf=(struct bpf_zbuf*)buffer;
-	
-	unsigned int bufmode=BPF_BUFMODE_ZBUF;
-	if (ioctl(sd, BIOCSETBUFMODE, &bufmode) < 0) {
-		int e=errno;
-		close(sd);
+	try {
+		initZeroCopyBuffer(sd,zbuf);
+		useZeroCopyBuffer=true;
+		buflen=zbuf->bz_buflen;
+		return;
+	} catch (const ppl7::Exception &ex) {
+		useZeroCopyBuffer=false;
 		free(buffer);
-		ppl7::throwExceptionFromErrno(e,"BIOCSETBUFMODE with BPF_BUFMODE_ZBUF failed");
+		close(sd);
+
+		// TODO: Buffered Mode
+		throw;
 	}
 
-	/*
-	size_t zbufsize=0;
-	if (ioctl(sd, BIOCGETZMAX, &zbufsize) < 0) {
-		int e=errno;
-		close(sd);
-		free(buffer);
-		ppl7::throwExceptionFromErrno(e,"BIOCGETZMAX");
-	}*/
-	unsigned int tstype=BPF_T_MICROTIME;
-	if (ioctl(sd, BIOCSTSTAMP, &tstype) < 0) {
-		int e=errno;
-		close(sd);
-		free(buffer);
-		ppl7::throwExceptionFromErrno(e,"BIOCSTSTAMP");
-	}
-	zbuf->bz_buflen=ZBUF_SIZE;
-	zbuf->bz_bufa=malloc(ZBUF_SIZE);
-	if (!zbuf->bz_bufa) {
-                close(sd);
-		free(buffer);
-		throw ppl7::OutOfMemoryException();
-	}
-	zbuf->bz_bufb=malloc(ZBUF_SIZE);
-	if (!zbuf->bz_bufb) {
-                close(sd);
-		free(zbuf->bz_bufa);
-		free(buffer);
-		throw ppl7::OutOfMemoryException();
-	}
-	memset(zbuf->bz_bufa,0,ZBUF_SIZE);
-	memset(zbuf->bz_bufb,0,ZBUF_SIZE);
-
-	if (ioctl(sd, BIOCSETZBUF, zbuf) < 0) {
-		int e=errno;
-                close(sd);
-		free(zbuf->bz_bufa);
-		free(zbuf->bz_bufb);
-		free(buffer);
-                ppl7::throwExceptionFromErrno(e,"BIOCGETZMAX");
-        }
 
 	
 #else

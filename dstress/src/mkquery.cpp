@@ -37,8 +37,6 @@ struct DNS_OPT
 };
 #pragma pack(pop)   /* restore original alignment from stack */
 
-unsigned char edns0[]= {0x00, 0x00, 0x29, 0x10, 00, 00, 00, 0x80, 00, 00, 0x00, 00, 0x0a, 00, 0x08,
-		0xd1, 0xfe, 0xa6, 0x1c, 0xe5, 0x17, 0xc8, 0xe4};
 
 int MakeQuery(const ppl7::String &query, unsigned char *buffer, size_t buffersize, bool dnssec, int udp_payload_size)
 {

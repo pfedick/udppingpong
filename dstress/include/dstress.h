@@ -97,6 +97,9 @@ private:
 	int buflen;
 	int sd;
 	unsigned short SourcePort;
+#ifdef __FreeBSD__
+	bool useZeroCopyBuffer;
+#endif
 
 public:
 	RawSocketReceiver();
