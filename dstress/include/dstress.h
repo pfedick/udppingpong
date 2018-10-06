@@ -122,13 +122,11 @@ public:
 class PayloadFile
 {
 private:
-	ppl7::File QueryFile;
 	ppl7::Mutex QueryMutex;
 	ppluint64 validLinesInQueryFile;
 	std::list<ppl7::ByteArray> querycache;
 	std::list<ppl7::ByteArray>::const_iterator it;
-
-	void precache(ppl7::File &ff);
+	void loadAndCompile(ppl7::File &ff);
 public:
 	PayloadFile();
 	void openQueryFile(const ppl7::String &Filename);

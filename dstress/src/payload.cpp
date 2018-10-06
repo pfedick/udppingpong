@@ -40,17 +40,18 @@ PayloadFile::PayloadFile()
 void PayloadFile::openQueryFile(const ppl7::String &Filename)
 {
 	if (Filename.isEmpty()) throw InvalidQueryFile("File not given");
+	ppl7::File QueryFile;
 	QueryFile.open(Filename,ppl7::File::READ);
 	if (QueryFile.size()==0) {
 		throw InvalidQueryFile("File is empty [%s]", (const char*)Filename);
 	}
-	printf ("INFO: Loading payload: %s...\n",(const char*)Filename);
-	precache(QueryFile);
+	printf ("INFO: Loading and precompile payload. This could take some time...\n");
+	loadAndCompile(QueryFile);
 	printf ("INFO: %llu queries loaded\n",validLinesInQueryFile);
 	it=querycache.begin();
 }
 
-void PayloadFile::precache(ppl7::File &ff)
+void PayloadFile::loadAndCompile(ppl7::File &ff)
 {
 	ppl7::ByteArray buf(4096);
 	ppl7::String buffer;
@@ -58,26 +59,24 @@ void PayloadFile::precache(ppl7::File &ff)
 	unsigned char *compiled_query=(unsigned char *)buf.ptr();
 	while (1) {
 		try {
-			if (QueryFile.eof()) throw ppl7::EndOfFileException();
-			QueryFile.gets(buffer,1024);
+			if (ff.eof()) throw ppl7::EndOfFileException();
+			ff.gets(buffer,1024);
 			buffer.trim();
 			if (buffer.isEmpty()) continue;
 			if (buffer.c_str()[0]=='#') continue;
-			//stringcache.push_back(buffer);
 			try {
+				// Precompile Query
 				int size=MakeQuery(buffer,compiled_query,4096,false);
 				querycache.push_back(ppl7::ByteArray(compiled_query,size));
 				validLinesInQueryFile++;
 			} catch (...) {
-
+				// ignore invalid queries
 			}
 		} catch (const ppl7::EndOfFileException &) {
 			if (validLinesInQueryFile==0) {
 				throw InvalidQueryFile("No valid Queries found in Queryfile");
 			}
 			return;
-		} catch (...) {
-			throw;
 		}
 	}
 }
