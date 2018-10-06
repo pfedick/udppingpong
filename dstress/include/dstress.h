@@ -10,6 +10,7 @@
 
 #include <ppl7.h>
 #include <ppl7-inet.h>
+#include "dnsperftest_sensor.h"
 //#include "udpecho.h"
 
 PPL7EXCEPTION(MissingCommandlineParameter, Exception);
@@ -157,8 +158,7 @@ class DNSReceiverThread : public ppl7::Thread
 
 class DNSSender
 {
-	private:
-
+	public:
 		class Results
 		{
 			public:
@@ -175,7 +175,12 @@ class DNSSender
 				double		rtt_total;
 				double		rtt_min;
 				double		rtt_max;
+				Results();
+				void clear();
 		};
+
+
+	private:
 		ppl7::ThreadPool threadpool;
 		ppl7::IPAddress TargetIP;
 		ppl7::IPAddress SourceIP;
@@ -187,6 +192,8 @@ class DNSSender
 		ppl7::String InterfaceName;
 		PayloadFile payload;
 		DNSReceiverThread Receiver;
+		DNSSender::Results vis_prev_results;
+		SystemStat sys1,sys2;
 
 		int TargetPort;
 		int Laufzeit;
@@ -211,11 +218,15 @@ class DNSSender
 		int getParameter(int argc, char**argv);
 		int openFiles();
 
+		void showCurrentStats(ppl7::ppl_time_t start_time);
+
 	public:
 		DNSSender();
 		void help();
 		int main(int argc, char**argv);
 };
+
+DNSSender::Results operator-(const DNSSender::Results &first, const DNSSender::Results &second);
 
 class DNSSenderThread : public ppl7::Thread
 {

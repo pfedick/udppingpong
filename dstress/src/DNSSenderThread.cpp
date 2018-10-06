@@ -31,6 +31,7 @@ DNSSenderThread::DNSSenderThread()
 	verbose=false;
 	spoofingEnabled=false;
 	DnssecRate=0;
+	dnsseccounter=0;
 	payload=NULL;
 }
 
@@ -306,7 +307,7 @@ void DNSSenderThread::runWithRateLimit()
 		}
 	}
 	if (verbose) {
-		printf ("total idle: %0.6f\n",total_idle);
+		//printf ("total idle: %0.6f\n",total_idle);
 	}
 }
 
