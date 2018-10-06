@@ -192,7 +192,7 @@ class DNSSender
 		ppl7::Array rates;
 		ppl7::String InterfaceName;
 		PayloadFile payload;
-		DNSReceiverThread Receiver;
+		DNSReceiverThread *Receiver;
 		DNSSender::Results vis_prev_results;
 		SystemStat sys1,sys2;
 
@@ -223,6 +223,7 @@ class DNSSender
 
 	public:
 		DNSSender();
+		~DNSSender();
 		void help();
 		int main(int argc, char**argv);
 };

@@ -75,9 +75,6 @@ int main(int argc, char**argv)
 	// setting the following options:
 	_res.options|=RES_USE_EDNS0;
 	_res.options|=RES_USE_DNSSEC;
-#ifdef __FreeBSD__
-	//return freebsd_main();
-#endif
 	DNSSender Sender;
 	return Sender.main(argc,argv);
 }
@@ -180,6 +177,12 @@ DNSSender::DNSSender()
 	DnssecRate=0;
 	TargetPort=53;
 	spoofingEnabled=false;
+	Receiver=NULL;
+}
+
+DNSSender::~DNSSender()
+{
+	if (Receiver) delete Receiver;
 }
 
 /*!\brief Liste der zu testenden Queryrates erstellen
@@ -259,18 +262,11 @@ int DNSSender::getParameter(int argc, char**argv)
 		help();
 		return 1;
 	}
+	ignoreResponses=ppl7::HaveArgv(argc,argv,"--ignore");
+
 	if (ppl7::HaveArgv(argc,argv,"-e")) {
 		InterfaceName=ppl7::GetArgv(argc,argv,"-e");
 	}
-	try {
-		Receiver.setInterface(InterfaceName);
-	} catch (const ppl7::Exception &e) {
-                printf ("ERROR: Konnte nicht an Device binden [%s]\n",(const char*)InterfaceName);
-                e.print();
-                printf ("\n");
-                help();
-                return 1;
-        } 
 
 	try {
 		getTarget(argc, argv);
@@ -290,7 +286,6 @@ int DNSSender::getParameter(int argc, char**argv)
 	Zeitscheibe = ppl7::GetArgv(argc,argv,"-i").toFloat();
 	CSVFileName = ppl7::GetArgv(argc,argv,"-c");
 	QueryFilename = ppl7::GetArgv(argc,argv,"-p");
-	ignoreResponses=ppl7::HaveArgv(argc,argv,"--ignore");
 	if (ppl7::HaveArgv(argc,argv,"-d")) {
 		DnssecRate=ppl7::GetArgv(argc,argv,"-d").toInt();
 		if (DnssecRate<0 || DnssecRate>100) {
@@ -358,7 +353,20 @@ int DNSSender::main(int argc, char**argv)
 
 	DNSSender::Results results;
 	try {
-		Receiver.setSource(TargetIP,TargetPort);
+		if (!ignoreResponses) {
+			Receiver=new DNSReceiverThread();
+			Receiver->setSource(TargetIP,TargetPort);
+			try {
+				Receiver->setInterface(InterfaceName);
+			} catch (const ppl7::Exception &e) {
+				printf ("ERROR: Konnte nicht an Device binden [%s]\n",(const char*)InterfaceName);
+				e.print();
+				printf ("\n");
+				help();
+				return 1;
+			}
+
+		}
 		prepareThreads();
 		for (size_t i=0;i<rates.size();i++) {
 			results.queryrate=rates[i].toInt();
@@ -463,7 +471,7 @@ void DNSSender::run(int queryrate)
 	}
 	vis_prev_results.clear();
 	sampleSensorData(sys1);
-	Receiver.threadStart();
+	if (Receiver) Receiver->threadStart();
 	threadpool.startThreads();
 	ppl7::ppl_time_t start=ppl7::GetTime();
 	ppl7::ppl_time_t report=start+1;
@@ -476,7 +484,7 @@ void DNSSender::run(int queryrate)
 			showCurrentStats(start);
 		}
 	}
-	Receiver.threadStop();
+	if (Receiver) Receiver->threadStop();
 	sampleSensorData(sys2);
 	if (stopFlag==true) {
 		threadpool.stopThreads();
@@ -503,14 +511,15 @@ void DNSSender::getResults(DNSSender::Results &result)
 		result.counter_0bytes+=((DNSSenderThread*)(*it))->getCounter0Bytes();
 		for (int i=0;i<255;i++) result.counter_errorcodes[i]+=((DNSSenderThread*)(*it))->getCounterErrorCode(i);
 	}
+	if (Receiver) {
+		result.counter_received=Receiver->getPacketsReceived();
+		result.bytes_received=Receiver->getBytesReceived();
+		result.duration=Receiver->getDuration();
+		result.rtt_total=Receiver->getRoundTripTimeAverage();
 
-	result.counter_received=Receiver.getPacketsReceived();
-	result.bytes_received=Receiver.getBytesReceived();
-	result.duration=Receiver.getDuration();
-	result.rtt_total=Receiver.getRoundTripTimeAverage();
-
-	result.rtt_min=Receiver.getRoundTripTimeMin();
-	result.rtt_max=Receiver.getRoundTripTimeMax();
+		result.rtt_min=Receiver->getRoundTripTimeMin();
+		result.rtt_max=Receiver->getRoundTripTimeMax();
+	}
 
 	result.packages_lost=result.counter_send-result.counter_received;
 	result.duration=result.duration/(double)ThreadCount;
