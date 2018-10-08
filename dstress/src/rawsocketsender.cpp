@@ -14,7 +14,7 @@
 #include <arpa/nameser.h>
 #include <resolv.h>
 #include <error.h>
-
+#include <errno.h>
 
 #include "dstress.h"
 
