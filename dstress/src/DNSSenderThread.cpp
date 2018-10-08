@@ -10,6 +10,7 @@
 #include <arpa/nameser.h>
 #include <resolv.h>
 #include <math.h>
+#include <errno.h>
 
 #include "dstress.h"
 

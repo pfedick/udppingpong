@@ -16,6 +16,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
+#include <errno.h>
 
 #ifdef __FreeBSD__
 #include <netinet/in_systm.h>
