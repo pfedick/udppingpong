@@ -424,6 +424,7 @@ void DNSSender::openCSVFile(const ppl7::String &Filename)
 		CSVFile.putsf ("#QPS Send; QPS Received; QPS Errors; Lostrate; "
 				"rtt_avg; rtt_min; rtt_max;"
 				"\n");
+		CSVFile.flush();
 	}
 }
 
@@ -533,6 +534,7 @@ void DNSSender::getResults(DNSSender::Results &result)
 	}
 
 	result.packages_lost=result.counter_send-result.counter_received;
+	if (result.counter_received>result.counter_send) result.packages_lost=0;
 	result.duration=result.duration/(double)ThreadCount;
 }
 
@@ -548,9 +550,9 @@ void DNSSender::saveResultsToCsv(const DNSSender::Results &result)
 
 	if (CSVFile.isOpen()) {
 		CSVFile.putsf ("%llu;%llu;%llu;%0.3f;%0.4f;%0.4f;%0.4f;\n",
-				(ppluint64)((double)result.counter_send/result.duration),
-				(ppluint64)((double)result.counter_received/result.duration),
-				(ppluint64)((double)result.counter_errors/result.duration),
+				(ppluint64)((double)result.counter_send/(double)Laufzeit),
+				(ppluint64)((double)result.counter_received/(double)Laufzeit),
+				(ppluint64)((double)result.counter_errors/(double)Laufzeit),
 				(double)result.packages_lost*100.0/(double)result.counter_send,
 				result.rtt_total*1000.0/(double)ThreadCount,
 				result.rtt_min*1000.0,
