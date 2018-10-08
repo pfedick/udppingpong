@@ -1,3 +1,7 @@
+#ifndef __FreeBSD__
+#define __FAVOR_BSD
+#endif
+
 #include <ppl7.h>
 #include <ppl7-inet.h>
 #include <string.h>
