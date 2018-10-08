@@ -13,11 +13,11 @@
 #include <arpa/inet.h>
 #include <arpa/nameser.h>
 #include <resolv.h>
-
-#ifdef __FreeBSD__
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
+
+#ifdef __FreeBSD__
 #include <netinet/in_systm.h>
 #include <net/if.h>
 #include <net/bpf.h>
