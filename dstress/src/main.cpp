@@ -10,7 +10,7 @@
 #include <arpa/inet.h>
 #include <arpa/nameser.h>
 #include <resolv.h>
-
+#include <signal.h>
 #include <list>
 
 #include <dnsperftest_sensor.h>
