@@ -73,5 +73,10 @@ double DNSReceiverThread::getRoundTripTimeMax() const
 	return counter.rtt_max;
 }
 
+const RawSocketReceiver::Counter &DNSReceiverThread::getCounter() const
+{
+	return counter;
+}
+
 
 

@@ -161,6 +161,7 @@ class DNSReceiverThread : public ppl7::Thread
 		double getRoundTripTimeAverage() const;
 		double getRoundTripTimeMin() const;
 		double getRoundTripTimeMax() const;
+		const RawSocketReceiver::Counter &getCounter() const;
 
 };
 
@@ -179,8 +180,10 @@ class DNSSender
 				ppluint64	packages_lost;
 				ppluint64   counter_0bytes;
 				ppluint64   counter_errorcodes[255];
-				double		duration;
+				ppluint64	rcodes[16];
+				ppluint64	truncated;
 				double		rtt_total;
+				double		rtt_avg;
 				double		rtt_min;
 				double		rtt_max;
 				Results();

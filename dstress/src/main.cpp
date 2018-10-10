@@ -16,8 +16,13 @@
 #include <dnsperftest_sensor.h>
 #include "dstress.h"
 
-int oldmain(int argc, char **argv);
-int freebsd_main();
+static const char *rcode_names[] = {
+		"OK", "FORMAT", "SRVFAIL", "NAME", "NOTIMPL", "REFUSED",
+		"YXDOMAIN", "YXRRSET", "NXRRSET", "NOTAUTH", "NOTZONE",
+		"11", "12", "13", "14", "15",
+		NULL
+};
+
 
 
 /*!\brief Stop-Flag
@@ -119,10 +124,12 @@ DNSSender::Results::Results()
 	packages_lost=0;
 	counter_0bytes=0;
 	for (int i=0;i<255;i++) counter_errorcodes[i]=0;
-	duration=0.0f;
+	rtt_avg=0.0f;
 	rtt_total=0.0f;
 	rtt_min=0.0f;
 	rtt_max=0.0f;
+	for (int i=0;i<16;i++) rcodes[i]=0;
+	truncated=0;
 }
 
 void DNSSender::Results::clear()
@@ -136,10 +143,12 @@ void DNSSender::Results::clear()
 	packages_lost=0;
 	counter_0bytes=0;
 	for (int i=0;i<255;i++) counter_errorcodes[i]=0;
-	duration=0.0f;
+	rtt_avg=0.0f;
 	rtt_total=0.0f;
 	rtt_min=0.0f;
 	rtt_max=0.0f;
+	for (int i=0;i<16;i++) rcodes[i]=0;
+	truncated=0;
 }
 
 DNSSender::Results operator-(const DNSSender::Results &second, const DNSSender::Results &first)
@@ -154,10 +163,14 @@ DNSSender::Results operator-(const DNSSender::Results &second, const DNSSender::
 	r.packages_lost=second.packages_lost-first.packages_lost;
 	r.counter_0bytes=second.counter_0bytes-first.counter_0bytes;
 	for (int i=0;i<255;i++) r.counter_errorcodes[i]=second.counter_errorcodes[i]-first.counter_errorcodes[i];
-	r.duration=second.duration-first.duration;
 	r.rtt_total=second.rtt_total-first.rtt_total;
+	if (r.counter_received) r.rtt_avg=r.rtt_total/r.counter_received;
+	else r.rtt_avg=0.0;
 	r.rtt_min=second.rtt_min-first.rtt_min;
 	r.rtt_max=second.rtt_max-first.rtt_max;
+
+	for (int i=0;i<16;i++) r.rcodes[i]=second.rcodes[i]-first.rcodes[i];
+	r.truncated=second.truncated-first.truncated;
 	return r;
 }
 
@@ -524,18 +537,20 @@ void DNSSender::getResults(DNSSender::Results &result)
 		for (int i=0;i<255;i++) result.counter_errorcodes[i]+=((DNSSenderThread*)(*it))->getCounterErrorCode(i);
 	}
 	if (Receiver) {
-		result.counter_received=Receiver->getPacketsReceived();
-		result.bytes_received=Receiver->getBytesReceived();
-		result.duration=Receiver->getDuration();
-		result.rtt_total=Receiver->getRoundTripTimeAverage();
-
-		result.rtt_min=Receiver->getRoundTripTimeMin();
-		result.rtt_max=Receiver->getRoundTripTimeMax();
+		const RawSocketReceiver::Counter &counter=Receiver->getCounter();
+		result.counter_received=counter.num_pkgs;
+		result.bytes_received=counter.bytes_rcv;
+		result.rtt_total=counter.rtt_total;
+		if (counter.num_pkgs) result.rtt_avg=counter.rtt_total/counter.num_pkgs;
+		else result.rtt_avg=0.0;
+		result.rtt_min=counter.rtt_min;
+		result.rtt_max=counter.rtt_max;
+		for (int i=0;i<16;i++) result.rcodes[i]=counter.rcodes[i];
+		result.truncated=counter.truncated;
 	}
 
 	result.packages_lost=result.counter_send-result.counter_received;
 	if (result.counter_received>result.counter_send) result.packages_lost=0;
-	result.duration=result.duration/(double)ThreadCount;
 }
 
 /*!\brief Ergebnisse in eine Datei schreiben
@@ -599,20 +614,28 @@ void DNSSender::presentResults(const DNSSender::Results &result)
 			result.rtt_total*1000.0/(double)ThreadCount,
 			result.rtt_min*1000.0,
 			result.rtt_max*1000.0);
+	printf ("DNS truncated: %llu\nDNS RCODES: ", result.truncated);
+	for (int i=0;i<15;i++) {
+		if (result.rcodes[i]) {
+			printf ("%s: %llu, ",rcode_names[i],result.rcodes[i]);
+		}
+	}
+	printf ("\n");
+
 
 
 	if (result.counter_errors) {
 		printf ("Errors:           %10llu, Qps: %10llu\n",result.counter_errors,
-				(ppluint64)((double)result.counter_errors/result.duration));
+				(ppluint64)((double)result.counter_errors/(double)Laufzeit));
 	}
 	if (result.counter_0bytes) {
 		printf ("Errors 0Byte:     %10llu, Qps: %10llu\n",result.counter_0bytes,
-				(ppluint64)((double)result.counter_0bytes/result.duration));
+				(ppluint64)((double)result.counter_0bytes/(double)Laufzeit));
 	}
 	for (int i=0;i<255;i++) {
 		if (result.counter_errorcodes[i]>0) {
 			printf ("Errors %3d:       %10llu, Qps: %10llu [%s]\n",i, result.counter_errorcodes[i],
-					(ppluint64)((double)result.counter_errorcodes[i]/result.duration),
+					(ppluint64)((double)result.counter_errorcodes[i]/(double)Laufzeit),
 					strerror(i));
 
 		}
