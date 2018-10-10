@@ -95,6 +95,18 @@ public:
 
 class RawSocketReceiver
 {
+public:
+	class Counter {
+	public:
+		Counter();
+		void clear();
+		ppluint64 num_pkgs;
+		ppluint64 bytes_rcv;
+		ppluint64 rcodes[16];
+		ppluint64 truncated;
+		double rtt_total, rtt_min, rtt_max;
+	};
+
 private:
 	ppl7::IPAddress SourceIP;
 	unsigned char *buffer;
@@ -111,11 +123,7 @@ public:
 	void initInterface(const ppl7::String &Device);
 	bool socketReady();
 	void setSource(const ppl7::IPAddress &ip_addr, int port);
-#ifdef __FreeBSD__
-	void receive(ppluint64 &num_pkgs, ppluint64 &bytes_rcv, double &rtt, double &min, double &max);
-#else
-	bool receive(size_t &size, double &rtt);
-#endif
+	void receive(Counter &counter);
 };
 
 
@@ -137,12 +145,7 @@ class DNSReceiverThread : public ppl7::Thread
 {
 	private:
 		RawSocketReceiver Socket;
-		ppluint64 counter_packets_received;
-		ppluint64 counter_bytes_received;
-		double total_rtt;
-		double min_rtt, max_rtt;
-
-
+		RawSocketReceiver::Counter counter;
 
 	public:
 		DNSReceiverThread();

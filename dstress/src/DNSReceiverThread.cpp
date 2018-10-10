@@ -15,9 +15,7 @@
 
 DNSReceiverThread::DNSReceiverThread()
 {
-	counter_packets_received=0;
-	counter_bytes_received=0;
-	min_rtt=max_rtt=total_rtt=0.0f;
+
 }
 
 DNSReceiverThread::~DNSReceiverThread()
@@ -37,73 +35,42 @@ void DNSReceiverThread::setSource(const ppl7::IPAddress &ip, int port)
 
 void DNSReceiverThread::run()
 {
-	counter_packets_received=0;
-	counter_bytes_received=0;
-	min_rtt=max_rtt=total_rtt=0.0f;
-#ifdef __FreeBSD__
+	counter.clear();
 	while (1) {
-		if (Socket.socketReady()) {
-			Socket.receive(counter_packets_received,
-					counter_bytes_received,
-					total_rtt,
-					min_rtt,
-					max_rtt);
-		}
+		if (Socket.socketReady()) Socket.receive(counter);
 		if (this->threadShouldStop()) break;
 	}
-#else
-	size_t size;
-	double rtt;
-	double start=ppl7::GetMicrotime();
-	double now,next_checktime=start+0.1;
-	while (1) {
-		if (Socket.socketReady()) {
-			if (Socket.receive(size,rtt)) {
-				counter_packets_received++;
-				counter_bytes_received+=size;
-				total_rtt+=rtt;
-				if (rtt>max_rtt) max_rtt=rtt;
-				if (rtt<min_rtt || min_rtt==0.0f) min_rtt=rtt;
-			}
-		}
-		now=ppl7::GetMicrotime();
-		if (now>next_checktime) {
-			next_checktime=now+0.1;
-			if (this->threadShouldStop()) break;
-		}
-	}
-#endif
 }
 
 ppluint64 DNSReceiverThread::getPacketsReceived() const
 {
-	return counter_packets_received;
+	return counter.num_pkgs;
 }
 
 ppluint64 DNSReceiverThread::getBytesReceived() const
 {
-	return counter_bytes_received;
+	return counter.bytes_rcv;
 }
 
 double DNSReceiverThread::getDuration() const
 {
-	return total_rtt;
+	return counter.rtt_total;
 }
 
 double DNSReceiverThread::getRoundTripTimeAverage() const
 {
-	if (counter_packets_received) return total_rtt/counter_packets_received;
+	if (counter.num_pkgs) return counter.rtt_total/counter.num_pkgs;
 	return 0.0f;
 }
 
 double DNSReceiverThread::getRoundTripTimeMin() const
 {
-	return min_rtt;
+	return counter.rtt_min;
 }
 
 double DNSReceiverThread::getRoundTripTimeMax() const
 {
-	return max_rtt;
+	return counter.rtt_max;
 }
 
 

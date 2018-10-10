@@ -109,6 +109,29 @@ void initBufferedMode(int sd, unsigned int buflen)
 
 #endif
 
+RawSocketReceiver::Counter::Counter()
+{
+	num_pkgs=0;
+	bytes_rcv=0;
+	truncated=0;
+	for (int i=0;i<15;i++) rcodes[i]=0;
+	rtt_total=0.0f;
+	rtt_min=0.0f;
+	rtt_max=0.0f;
+}
+
+void RawSocketReceiver::Counter::clear()
+{
+	num_pkgs=0;
+	bytes_rcv=0;
+	truncated=0;
+	for (int i=0;i<15;i++) rcodes[i]=0;
+	rtt_total=0.0f;
+	rtt_min=0.0f;
+	rtt_max=0.0f;
+}
+
+
 RawSocketReceiver::RawSocketReceiver()
 {
 	SourceIP.set("0.0.0.0");
@@ -254,6 +277,20 @@ bool RawSocketReceiver::socketReady()
 	return false;
 }
 
+
+static void count_packet(RawSocketReceiver::Counter &counter, unsigned char *buffer, size_t size)
+{
+	counter.num_pkgs++;
+	counter.bytes_rcv+=size;
+	struct DNS_HEADER *dns=(struct DNS_HEADER *)(buffer+14+sizeof(struct ip)+sizeof(struct udphdr));
+	double rd=getQueryRTT(ntohs(dns->id));
+	counter.rtt_total+=rd;
+	if (rd<counter.rtt_min || counter.rtt_min==0) counter.rtt_min=rd;
+	if (rd>counter.rtt_max) counter.rtt_max=rd;
+	if (dns->rcode<16) counter.rcodes[dns->rcode]++;
+	if (dns->tc) counter.truncated++;
+}
+
 #ifdef __FreeBSD__
 /*
  *	Return ownership of a buffer to	the kernel for reuse.
@@ -269,74 +306,62 @@ static int buffer_check(struct bpf_zbuf_header *bzh)
 			atomic_load_acq_int(&bzh->bzh_kernel_gen));
 }
 
-static void read_buffer(unsigned char *ptr, size_t size, ppluint64 &num_pkgs, ppluint64 &bytes_rcv, double &rtt, double &min, double &max)
+static void read_buffer(unsigned char *ptr, size_t size, RawSocketReceiver::Counter &counter)
 {
 	size_t done=0;
 	while (done<size) {
 		struct bpf_hdr* bpfh=(struct bpf_hdr*)ptr;
 		if (bpfh->bh_caplen==0 || bpfh->bh_hdrlen==0) break;
 		size_t chunk_size=BPF_WORDALIGN(bpfh->bh_caplen+bpfh->bh_hdrlen);
-		num_pkgs++;
-		bytes_rcv+=bpfh->bh_datalen;
-		struct DNS_HEADER *dns=(struct DNS_HEADER *)(ptr+bpfh->bh_hdrlen+14+sizeof(struct ip)+sizeof(struct udphdr));
-		double rd=getQueryRTT(ntohs(dns->id));
-		rtt+=rd;
-		if (rd<min || min==0) min=rd;
-		if (rd>max) max=rd;
-
+		count_packet(counter,ptr+bpfh->bh_hdrlen,chunk_size-bpfh->bh_datalen);
 		ptr+=chunk_size;
 		done+=chunk_size;
 	}
 }
 
-static void read_zbuffer(struct bpf_zbuf_header *zhdr, ppluint64 &num_pkgs, ppluint64 &bytes_rcv, double &rtt, double &min, double &max)
+static void read_zbuffer(struct bpf_zbuf_header *zhdr, RawSocketReceiver::Counter &counter)
 {
 	size_t size=zhdr->bzh_kernel_len-sizeof(struct bpf_zbuf_header);
 	unsigned char *ptr=(unsigned char *)zhdr+sizeof(struct bpf_zbuf_header);
-	read_buffer(ptr,size,num_pkgs,bytes_rcv,rtt,min,max);
+	read_buffer(ptr,size,counter);
 	buffer_acknowledge(zhdr);
 }
-void RawSocketReceiver::receive(ppluint64 &num_pkgs, ppluint64 &bytes_rcv, double &rtt, double &min, double &max)
+void RawSocketReceiver::receive(RawSocketReceiver::Counter &counter)
 {
 	if (useZeroCopyBuffer) {
 		struct bpf_zbuf *zbuf=(struct bpf_zbuf*)buffer;
 		struct bpf_zbuf_header *zhdr=NULL;
 		if (buffer_check((struct bpf_zbuf_header *)zbuf->bz_bufa)) {
 			zhdr=((struct bpf_zbuf_header *)zbuf->bz_bufa);
-			read_zbuffer(zhdr, num_pkgs, bytes_rcv, rtt, min, max);
+			read_zbuffer(zhdr, counter);
 		}
 		if (buffer_check((struct bpf_zbuf_header *)zbuf->bz_bufb)) {
 			zhdr=((struct bpf_zbuf_header *)zbuf->bz_bufb);
-			read_zbuffer(zhdr, num_pkgs, bytes_rcv, rtt, min, max);
+			read_zbuffer(zhdr, counter);
 		}
 	} else {
 		ssize_t bufused=read(sd,buffer,buflen);
 		if (bufused<34) return;
-		read_buffer(buffer,bufused, num_pkgs, bytes_rcv, rtt, min, max);
+		read_buffer(buffer,bufused,counter);
 	}
 }
 
 #else
-bool RawSocketReceiver::receive(size_t &size, double &rtt)
+void RawSocketReceiver::receive(Counter &counter)
 {
 	unsigned char *ptr=buffer;
 	ssize_t bufused=recvfrom(sd,buffer,buflen,0,NULL,NULL);
-	if (bufused<34) return false;
+	if (bufused<34) return;
 	struct ETHER *eth=(struct ETHER*)ptr;
 	//ppl7::HexDump(ptr,bufused);
 	//printf ("sizeof ETHER=%d, type=%X\n",sizeof(struct ETHER),eth->type);
-	if (eth->type!=htons(0x0800)) return false;
+	if (eth->type!=htons(0x0800)) return;
 	struct ip *iphdr = (struct ip *)(ptr+14);
-	if (iphdr->ip_v!=4) return false;
-	if (iphdr->ip_src.s_addr!=*(in_addr_t*)SourceIP.addr()) return false;
+	if (iphdr->ip_v!=4) return;
+	if (iphdr->ip_src.s_addr!=*(in_addr_t*)SourceIP.addr()) return;
 
 	struct udphdr *udp = (struct udphdr *)(ptr+14+sizeof(struct ip));
-	if (udp->uh_sport!=SourcePort) return false;
-	size=bufused-sizeof(struct ETHER);
-
-	struct DNS_HEADER *dns=(struct DNS_HEADER *)(ptr+14+sizeof(struct ip)+sizeof(struct udphdr));
-
-	rtt=getQueryRTT(ntohs(dns->id));
-	return true;
+	if (udp->uh_sport!=SourcePort) return;
+	count_packet(counter,ptr,bufused);
 }
 #endif
