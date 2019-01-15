@@ -1,8 +1,17 @@
 EXTRA_CFLAGS = 
-INCLUDE	= -I. -Iinclude -I../CommonLib/include
-CFLAGS	= -ggdb -O2 -Wall  $(INCLUDE) `ppl7-config --cflags release` $(EXTRA_CFLAGS)
-LIBS	= `ppl7-config --libs release` -lrt -lstdc++
-LIBDEP  := $(shell ppl7-config --ppllib release)
+INCLUDE	= -I. -Iinclude -I../CommonLib/include -I../ppl7/include
+
+CFLAGS		=  -ggdb -O2 -Wall  $(INCLUDE)  -I/usr/local/include -DHAVE_CONFIG_H  -pthread \
+	-I/usr/include      \
+	$(EXTRA_CFLAGS)
+
+
+LIBS = ../ppl7/release/libppl7.a  -lssl -lcrypto -lresolv -lresolv -lresolv -lresolv -lresolv -lresolv -lresolv -lm  -pthread  \
+	-L/usr/lib -lz -lbz2 -lpcre   -lrt -lstdc++
+
+LIBDEP = ../ppl7/release/libppl7.a
+
+
 
 UNAME := $(shell uname)
 ifeq "$(UNAME)" "FreeBSD"
