@@ -14,22 +14,23 @@ cp include/compat.h include/ppl7.h include/ppl7-algorithms.h include/ppl7-except
    include/ppl7-inet.h include/ppl7-types.h include/prolog.h include/socket.h \
    include/ppl7-crypto.h include/crypto.h \
    include/threads.h include/config.h.in include/ppl7-config.h.in $WORK/ppl7/include
-find src/core src/asm/common.asm src/asm/cpu.asm src/internet/inet* src/internet/ip* \
+find src/core/Compat.cpp src/core/Dir* src/core/Exceptions* src/core/File* \
+	src/core/Functions* src/core/MemFile* src/core/Mutex* src/core/Signal* \
+	src/core/String* src/core/Thread* src/core/Time* src/core/AVL* \
+	src/core/Memory* \
+	| cpio -pdmv $WORK/ppl7
+find src/internet/inet* src/internet/ip* src/internet/openssl* \
    src/internet/sock* src/internet/*Socket* src/math  src/types | cpio -pdmv $WORK/ppl7
-find src/crypto/Digest.cpp src/internet/openssl.cpp src/internet/resolver.cpp | cpio -pdmv $WORK/ppl7
+find src/internet/resolver.cpp | cpio -pdmv $WORK/ppl7
+cp LICENSE.TXT $WORK/ppl7
 rm -rf $WORK/ppl7/src/core/Resourcen.cpp
 
 cp genMakefile.in $WORK/ppl7
 
 cp autoconf/ax_cxx_compile_stdcxx.m4 $WORK/autoconf
-cp autoconf/ax_check_openssl.m4 $WORK/autoconf
 cp autoconf/ax_path_lib_pcre.m4 $WORK/autoconf
 cp autoconf/ax_pthread.m4 $WORK/autoconf
-cp autoconf/nasm.m4 $WORK/autoconf
 cp autoconf/lib-link.m4 $WORK/autoconf
-cp autoconf/iconv.m4 $WORK/autoconf
-cp autoconf/bzip2.m4 $WORK/autoconf
-cp autoconf/ax_check_zlib.m4 $WORK/autoconf
 cp autoconf/checkfuncs.m4 $WORK/autoconf
 cp autoconf/ax_gcc_x86_cpuid.m4 $WORK/autoconf
 cp autoconf/ax_check_compiler_flags.m4 $WORK/autoconf

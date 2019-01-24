@@ -361,9 +361,9 @@ class SocketMessage
 
 
 		void setCommandId(int id);
-		int getCommandId();
+		int getCommandId() const;
 		void setId(int id);
-		int getId();
+		int getId() const;
 		void setPayload(const String &msg);
 		void setPayload(const AssocArray &msg);
 		void setPayload(const ByteArrayPtr &msg);
@@ -717,7 +717,7 @@ class WikiParser
 
 
 		void init();
-		int renderInternal(const String &Source, String &Html);
+		void renderInternal(const String &Source, String &Html);
 		void extractNoWiki(String &Text);
 		void extractSourcecode(String &Text);
 		void extractDiagrams(String &Text);
@@ -745,15 +745,15 @@ class WikiParser
 
 		WikiParser();
 		virtual ~WikiParser();
-		int render(const String &Source, String &Html);
-		int renderBody(const String &Source, String &Html);
+		void render(const String &Source, String &Html);
+		void renderBody(const String &Source, String &Html);
 		String render(const String &Source);
 		String renderBody(const String &Source);
 		String header();
 		void setIndexEnabled(bool enabled);
 		void setBaseURI(const String &Uri);
 		static String xmlDiagram2HTML(const String &xml);
-		virtual int getHeader(String &Html);
+		virtual void getHeader(String &Html);
 };
 
 

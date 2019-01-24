@@ -26,14 +26,9 @@ AC_CONFIG_HEADERS([ppl7/include/ppl7-config.h])
 ###############################################################################
 ## PPL7
 sinclude(autoconf/ax_cxx_compile_stdcxx.m4)
-sinclude(autoconf/ax_check_openssl.m4)
 sinclude(autoconf/ax_path_lib_pcre.m4)
 sinclude(autoconf/ax_pthread.m4)
-sinclude(autoconf/nasm.m4)
 sinclude(autoconf/lib-link.m4)
-sinclude(autoconf/iconv.m4)
-sinclude(autoconf/bzip2.m4)
-sinclude(autoconf/ax_check_zlib.m4)
 sinclude(autoconf/checkfuncs.m4)
 sinclude(autoconf/ax_gcc_x86_cpuid.m4)
 sinclude(autoconf/ax_check_compiler_flags.m4)
@@ -41,11 +36,7 @@ sinclude(autoconf/ax_gcc_archflag.m4)
 sinclude(autoconf/libbind.m4)
 
 report_have_pthreads="no"
-report_have_iconv="no"
-report_have_bzip2="no"
-report_have_zlib="no"
 report_have_pcre="no"
-report_have_nasm="no"
 
 AC_CANONICAL_TARGET
 
@@ -125,20 +116,6 @@ else
 	if test $ac_cv_sizeof_long -eq 8; then
 		AC_DEFINE(ppluint64,unsigned long)
 		AC_DEFINE(pplint64,signed long)
-	fi
-fi
-
-if test $ac_cv_sizeof_wchar_t -eq 4; then
-	if test "$report_byteorder" = "LITTLE ENDIAN"; then
-		AC_DEFINE(ICONV_UNICODE,"UTF-32LE")
-	else
-		AC_DEFINE(ICONV_UNICODE,"UTF-32BE")
-	fi
-else
-	if test "$report_byteorder" = "LITTLE ENDIAN"; then
-		AC_DEFINE(ICONV_UNICODE,"UTF-16LE")
-	else
-		AC_DEFINE(ICONV_UNICODE,"UTF-16BE")
 	fi
 fi
 
@@ -296,26 +273,6 @@ fi
 LDFLAGS="$LDFLAGS -L/usr/local/lib"
 CFLAGS="$CFLAGS -I/usr/local/include"
 
-AM_ICONV
-if test "$am_cv_func_iconv_works" = "yes" 
-then
-	report_have_iconv="yes"
-	ICONV_CFLAGS=$INCICONV
-	ICONV_LIBS=$LIBICONV
-	AC_SUBST(ICONV_CFLAGS)
-	AC_SUBST(ICONV_LIBS)
-fi
-
-# Bzip2 Vorhanden?
-AM_BZIP2
-AX_CHECK_ZLIB(report_have_zlib="yes"
-	AC_DEFINE([HAVE_LIBZ], [1], [Define to 1 if you have `z' library (-lz)])
-	ZLIB_CFLAGS="-I${ZLIB_HOME}/include"
-	ZLIB_LIBS="-L${ZLIB_HOME}/lib -lz"
-	AC_SUBST(ZLIB_CFLAGS)
-	AC_SUBST(ZLIB_LIBS)
-)
-
 # PCRE vorhanden?
 AX_PATH_LIB_PCRE(
             AC_DEFINE(HAVE_PCRE, 1, [ Define if you have pcre. ])
@@ -323,62 +280,11 @@ AX_PATH_LIB_PCRE(
             ,
             )
 
-AX_CHECK_OPENSSL(
-	AC_DEFINE(HAVE_OPENSSL, 1, [ Define if you have openssl. ])
-	report_have_openssl="yes"
-	
-	am_save_CPPFLAGS="$CPPFLAGS"
-	am_save_CFLAGS="$CFLAGS"
-	am_save_LIBS="$LIBS"
-	am_save_LDFLAGS="$LDFLAGS"
-	
-	LIBS="$LIBS $OPENSSL_LIBS"
-	CFLAGS="$CFLAGS $OPENSSL_INCLUDES"
-	
-	AC_CHECK_FUNCS([TLS_method TLS_server_method TLS_client_method])
-	AC_CHECK_FUNCS([SSLv23_method SSLv23_server_method SSLv23_client_method])
-	
-	CPPFLAGS="$am_save_CPPFLAGS"
-	CFLAGS="$am_save_CFLAGS"
-	LIBS="$am_save_LIBS"
-	LDFLAGS="$am_save_LDFLAGS"	
-	
-	, :)
-	
-dnl Check for nasm
-AC_MSG_NOTICE(checking if we can use assembly)
-use_asm="none"
-report_have_nasm="no"
-case $target in
-	i?86*|x86*|amd64*)
-		AC_CHECK_NASM(2.0.0,
-			report_have_nasm="yes"
-		)
-		;;
-esac
-
 case $target in
 	x86_64*|amd64*)
 		AC_DEFINE(HAVE_AMD64,1,)
 		;;
 esac		
-
-if test $report_have_nasm = "yes"
-then
-	use_asm="nasm"
-	AC_DEFINE(HAVE_NASM,1,)
-	AC_DEFINE(HAVE_X86_ASSEMBLER,1,)
-	HAVE_X86_ASSEMBLER="ASM_RELEASE	=	\$(ASM_OBJ_RELEASE)
-ASM_DEBUG	=	\$(ASM_OBJ_DEBUG)
-ASM_COVERAGE	=	\$(ASM_OBJ_COVERAGE)"
-	AC_SUBST(HAVE_X86_ASSEMBLER)
-	ASM=${NASM}
-	ASMFLAGS=${NASMFLAGS}
-	ASMDEBUGFLAGS=${NASMDEBUGFLAGS}
-	AC_SUBST(ASM)
-	AC_SUBST(ASMFLAGS)
-	AC_SUBST(ASMDEBUGFLAGS)
-fi
 
 
 SRCDIR=`pwd`
@@ -441,6 +347,10 @@ FT2_CFLAGS=
 LIBLDNS_CFLAGS=
 IMLIB_CFLAGS=
 GCOV_CFLAGS=
+ZLIB_CFLAGS=
+BZ2_CFLAGS=
+OPENSSL_INCLUDES=
+ICONV_CFLAGS=
 
 AC_SUBST(MYSQL_CFLAGS)
 AC_SUBST(POSTGRESQL_CFLAGS)
@@ -457,6 +367,10 @@ AC_SUBST(FT2_CFLAGS)
 AC_SUBST(LIBLDNS_CFLAGS)
 AC_SUBST(IMLIB_CFLAGS)
 AC_SUBST(GCOV_CFLAGS)
+AC_SUBST(ZLIB_CFLAGS)
+AC_SUBST(BZ2_CFLAGS)
+AC_SUBST(OPENSSL_INCLUDES)
+AC_SUBST(ICONV_CFLAGS)
 
 IMLIB_LIBS=
 FT2_LIBS=
@@ -471,7 +385,16 @@ SDL2_LIBS=
 LIBCURL=
 LIBCDIO_LDFLAGS=
 LIBMICROHTTPD_LIBS=
-LIBIDN_LIBS
+LIBIDN_LIBS=
+OPENSSL_LDFLAGS=
+OPENSSL_LIBS=
+ZLIB_LIBS=
+BZ2_LIBS=
+ICONV_LIBS=
+ASM=
+ASMFLAGS=
+ASMDEBUGFLAGS=
+
 AC_SUBST(IMLIB_LIBS)
 AC_SUBST(FT2_LIBS)
 AC_SUBST(MYSQL_LDFLAGS)
@@ -486,15 +409,23 @@ AC_SUBST(LIBCURL)
 AC_SUBST(LIBCDIO_LDFLAGS)
 AC_SUBST(LIBMICROHTTPD_LIBS)
 AC_SUBST(LIBIDN_LIBS)
+AC_SUBST(OPENSSL_LDFLAGS)
+AC_SUBST(OPENSSL_LIBS)
+AC_SUBST(ZLIB_LIBS)
+AC_SUBST(BZ2_LIBS)
+AC_SUBST(ICONV_LIBS)
+AC_SUBST(ASM)
+AC_SUBST(ASMFLAGS)
+AC_SUBST(ASMDEBUGFLAGS)
+
+HAVE_X86_ASSEMBLER=
+AC_SUBST(HAVE_X86_ASSEMBLER)
+
+
 
 
 ############################
-AC_SUBST(report_have_zlib)
-AC_SUBST(report_have_bzip2)
-AC_SUBST(report_have_openssl)
 AC_SUBST(report_have_pcre)
-AC_SUBST(report_have_iconv)
-AC_SUBST(report_have_nasm)
 AC_SUBST(report_have_pthreads)
 AC_SUBST(report_have_libbind)
 
@@ -506,44 +437,6 @@ AC_SUBST(report_have_libbind)
 
 AC_OUTPUT
 
-
-###############################################################################
-# Report
-###############################################################################
-AC_MSG_RESULT([
-******************************************************************************
-** Configuration summary for $PACKAGE_NAME Version $PACKAGE_VERSION
-** Target: $target_os        CPU: $target_cpu
-** 
-** Byteorder: $report_byteorder
-**   Size of char         $ac_cv_sizeof_char     Size of float        $ac_cv_sizeof_float
-**   Size of short        $ac_cv_sizeof_short     Size of double       $ac_cv_sizeof_double
-**   Size of int          $ac_cv_sizeof_int     Size of void*        $ac_cv_sizeof_voidp
-**   Size of long         $ac_cv_sizeof_long     Size of wchar_t      $ac_cv_sizeof_wchar_t
-**   Size of long long    $ac_cv_sizeof_long_long     
-**   Size of size_t       $ac_cv_sizeof_size_t
-******************************************************************************
-** Assembler:
-**   Nasm (x86 assembler): $report_have_nasm
-**
-** Threads:                $report_have_pthreads
-**
-** Compression:
-**   ZLIB library:         $report_have_zlib
-**   BZIP2 library:        $report_have_bzip2
-**
-** Cryptography:
-**   OpenSSL:              $report_have_openssl
-**
-** Internet:
-**   Bind resolver lib:    $report_have_libbind
-**
-** Other:
-**   PCRE:                 $report_have_pcre
-**   ICONV:                $report_have_iconv
-**
-******************************************************************************
-])
 
 
 

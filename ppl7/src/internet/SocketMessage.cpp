@@ -210,12 +210,12 @@ void SocketMessage::getPayload(ByteArray &msg) const
 	msg.copy(payload,payload_size);
 }
 
-int SocketMessage::getId()
+int SocketMessage::getId() const
 {
 	return Id;
 }
 
-int SocketMessage::getCommandId()
+int SocketMessage::getCommandId() const
 {
 	return commandId;
 }

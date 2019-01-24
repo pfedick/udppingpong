@@ -11,7 +11,7 @@ somewhere else (e.g. /usr/bin), please use ./configure --prefix:
 
 ./configure --prefix=/usr
 
-# Uinstall
+# Uninstall
 make uninstall
 
 # dstress

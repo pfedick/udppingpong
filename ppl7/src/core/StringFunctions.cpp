@@ -731,10 +731,14 @@ String Transcode(const char * str, size_t size, const String &fromEncoding, cons
 
 String Transcode(const String &str, const String &fromEncoding, const String &toEncoding)
 {
+#ifndef HAVE_ICONV
+	throw UnsupportedFeatureException("Iconv");
+#else
 	ppl7::Iconv iconv(fromEncoding,toEncoding);
 	String to;
 	iconv.transcode(str,to);
 	return to;
+#endif
 
 }
 

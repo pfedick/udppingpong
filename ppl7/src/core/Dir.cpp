@@ -1087,22 +1087,10 @@ void Dir::open(const char *path, Sort s)
 	if (!dir) {
 		File::throwErrno(errno,path);
 	}
-#ifdef HAVE_READDIR_R
-	struct dirent d;
-#endif
 	DirEntry de;
 	String CurrentFile;
 	while (1) {
-#ifdef HAVE_READDIR_R
-		struct dirent *result;
-		if (readdir_r(dir,&d,&result)!=0) {
-			int e=errno;
-			closedir(dir);
-			File::throwErrno(e,path);
-		}
-#else
 		struct dirent *result=readdir(dir);
-#endif
 		if (result==NULL) break;
 		CurrentFile=Path+"/"+String(result->d_name);
 		//ppl7::PrintDebugTime ("DEBUG: CurrentFile=%s\n",(const char*)CurrentFile);

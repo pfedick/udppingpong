@@ -1525,7 +1525,9 @@ void AssocArray::exportBinary(void *buffer, size_t buffersize, size_t *realsize)
 	String string;
 	WideString widestring;
 	ByteArray ba;
+#ifdef HAVE_ICONV
 	Iconv iconv(ICONV_UNICODE,"UTF-8");
+#endif
 	if (!buffer) buffersize=0;
 	if (p+7<buffersize) strncpy(ptr,"PPLASOC",7);
 	p+=7;
@@ -1716,7 +1718,7 @@ size_t AssocArray::importBinary(const void *buffer, size_t buffersize)
 				iconv.transcode(ByteArrayPtr((const char*)ptr+p,vallen),nb);
 				ws.set((const wchar_t *)nb.ptr(),nb.size());
 #else
-				ws.set(key,(const char*)ptr+p,vallen);
+				ws.set((const wchar_t*)ptr+p,vallen);
 #endif
 				set(key,ws);
 				p+=vallen;

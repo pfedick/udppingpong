@@ -11,7 +11,6 @@
 #include <ppl7.h>
 #include <ppl7-inet.h>
 #include "dnsperftest_sensor.h"
-//#include "udpecho.h"
 
 PPL7EXCEPTION(MissingCommandlineParameter, Exception);
 PPL7EXCEPTION(InvalidCommandlineParameter, Exception);

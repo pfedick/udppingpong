@@ -48,6 +48,7 @@
 
 #include "ppl7.h"
 
+#include <map>
 
 namespace ppl7 {
 
