@@ -4,11 +4,8 @@ AC_INIT([dnsperftest], [1.0.0], [fedick@denic.de], [dnsperftest-1.0.0.tar.bz2])
 AC_CONFIG_AUX_DIR([autoconf])
 
 #DNSPerfTest
-AC_CONFIG_SRCDIR([CommonLib/include/dnsperftest_sensor.h])
+AC_CONFIG_SRCDIR([src/bouncer.cpp])
 AC_CONFIG_FILES([Makefile])
-AC_CONFIG_FILES([CommonLib/Makefile])
-AC_CONFIG_FILES([dstress/Makefile])
-AC_CONFIG_FILES([UdpPingPong/Makefile])
 AC_CONFIG_HEADERS([include/config.h])
 
 
@@ -58,7 +55,7 @@ AC_SUBST(NOPIE)
 case "$host_os" in
 	freebsd* )
 		CFLAGS="-I/usr/local/include $CFLAGS"
-		LDFLAGS="-L/usr/local/lib $LDFLAGS"
+		LDFLAGS="-L/usr/local/lib $LDFLAGS -lkvm"
   		;;
 esac
 

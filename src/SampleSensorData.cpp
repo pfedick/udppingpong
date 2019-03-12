@@ -313,7 +313,7 @@ void SystemStat::importFromArray(const ppl7::AssocArray &data)
 	net_total.transmit.errs=data.getString("net_total/transmit/errs").toUnsignedLong();
 	net_total.transmit.drop=data.getString("net_total/transmit/drop").toUnsignedLong();
 
-	const ppl7::AssocArray &data_if_list=data.getArray("interface");
+	const ppl7::AssocArray &data_if_list=data.getAssocArray("interface");
 	ppl7::AssocArray::Iterator it;
 	data_if_list.reset(it);
 	while (data_if_list.getNext(it)) {

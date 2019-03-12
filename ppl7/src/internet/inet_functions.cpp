@@ -83,13 +83,17 @@
 #ifdef HAVE_SIGNAL_H
     #include <signal.h>
 #endif
-#ifdef HAVE_LIBIDN
-	#include <idna.h>
-	#ifdef WIN32
-		#ifndef MINGW32
-			#include <idn-free.h>
-		#else
-			#define idn_free free
+#ifdef HAVE_LIBIDN2
+	#include <idn2.h>
+#else
+	#ifdef HAVE_LIBIDN
+		#include <idna.h>
+		#ifdef WIN32
+			#ifndef MINGW32
+				#include <idn-free.h>
+			#else
+				#define idn_free free
+			#endif
 		#endif
 	#endif
 #endif
@@ -164,11 +168,27 @@ String Idn2Ace(const String &idn)
  */
 WideString Idn2Ace(const WideString &idn)
 {
+#ifdef HAVE_LIBIDN2
+	WideString ace;
+	char *a=NULL;
+	ByteArray ucs4=idn.toUCS4();
+	if (IDNA_SUCCESS==idn2_to_ascii_4z((const uint32_t*)ucs4.ptr(),&a,0) && a!=NULL) {
+		ace.set(a);
+		free(a);
+		return ace;
+	}
+	free(a);
+	throw IdnConversionException("%ls",(const wchar_t*)idn);
+#else
 #ifdef HAVE_LIBIDN
 	WideString ace;
 	char *a=NULL;
 	ByteArray ucs4=idn.toUCS4();
-	if (IDNA_SUCCESS==idna_to_ascii_4z((const uint32_t*)ucs4.ptr(),&a,0) && a!=NULL) {
+	int flags=0;
+	#ifdef HAVE_LIBIDN2_IDN2_NO_TR46
+		flags=IDN2_NO_TR46;
+	#endif
+	if (IDNA_SUCCESS==idna_to_ascii_4z((const uint32_t*)ucs4.ptr(),&a,flags) && a!=NULL) {
 		ace.set(a);
 #ifdef _WIN32
 		idn_free(a);
@@ -186,6 +206,7 @@ WideString Idn2Ace(const WideString &idn)
 	throw IdnConversionException("%ls",(const wchar_t*)idn);
 #else
 	throw UnsupportedFeatureException("libidn");
+#endif
 #endif
 }
 
@@ -220,6 +241,23 @@ String Ace2Idn(const String &ace)
  */
 WideString Ace2Idn(const WideString &ace)
 {
+#ifdef HAVE_LIBIDN2
+	WideString idn;
+	uint32_t *a=NULL;
+	ByteArray ucs4=ace.toUCS4();
+	int flags=0;
+	#ifdef HAVE_LIBIDN2_IDN2_NO_TR46
+		flags=IDN2_NO_TR46;
+	#endif
+    if (IDNA_SUCCESS==idn2_to_unicode_4z4z((const uint32_t*)ucs4.ptr(), &a,flags) && a!=NULL) {
+		idn.fromUCS4(a);
+		free(a);
+		return idn;
+    }
+    free(a);
+    throw IdnConversionException("%ls",(const wchar_t*)ace);
+#else
+
 #ifdef HAVE_LIBIDN
 	WideString idn;
 	uint32_t *a=NULL;
@@ -242,6 +280,7 @@ WideString Ace2Idn(const WideString &ace)
 		throw IdnConversionException("%ls",(const wchar_t*)ace);
 #else
 	throw UnsupportedFeatureException("libidn");
+#endif
 #endif
 }
 

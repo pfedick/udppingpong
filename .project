@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>DNSPerfTest- GitHub</name>
+	<name>UDP PingPong</name>
 	<comment></comment>
-	<projects>
-		<project>PPL7</project>
-	</projects>
 	<buildSpec>
 		<buildCommand>
 			<name>org.eclipse.cdt.managedbuilder.core.genmakebuilder</name>

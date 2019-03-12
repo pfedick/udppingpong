@@ -7,12 +7,24 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
-#include <dnsperftest_sensor.h>
 
 typedef struct {
 		ppluint64 id;
 		double time;
 } PACKET;
+
+class UDPEchoCounter {
+	public:
+		ppluint64 packets_received;
+		ppluint64 packets_send;
+		ppluint64 bytes_received;
+		ppluint64 bytes_send;
+		double sampleTime;
+		void clear();
+		void exportToArray(ppl7::AssocArray &data) const;
+		void importFromArray(const ppl7::AssocArray &data);
+};
+
 
 class UDPSenderResults
 {

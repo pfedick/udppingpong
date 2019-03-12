@@ -87,17 +87,17 @@ Signal::~Signal()
 
 void Signal::catchSignal(SignalType sig)
 {
-	if (SIG_ERR==signal(sig, pplsignal)) throwExceptionFromErrno(errno,"Signal::catchSignal");
+	if (SIG_ERR==signal((int)sig,pplsignal)) throwExceptionFromErrno(errno,"Signal::catchSignal");
 }
 
 void Signal::ignoreSignal(SignalType sig)
 {
-	if (SIG_ERR==signal(sig, SIG_IGN)) throwExceptionFromErrno(errno,"Signal::catchSignal");
+	if (SIG_ERR==signal((int)sig, SIG_IGN)) throwExceptionFromErrno(errno,"Signal::catchSignal");
 }
 
 void Signal::clearSignal(SignalType sig)
 {
-	if (SIG_ERR==signal(sig, SIG_DFL)) throwExceptionFromErrno(errno,"Signal::catchSignal");
+	if (SIG_ERR==signal((int)sig, SIG_DFL)) throwExceptionFromErrno(errno,"Signal::catchSignal");
 }
 
 void Signal::signalHandler(SignalType sig)

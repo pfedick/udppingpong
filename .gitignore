@@ -5,3 +5,6 @@
 /config.status
 /Release/
 /autom4te.cache/
+/build/
+/pingpong_bouncer
+/pingpong_sender

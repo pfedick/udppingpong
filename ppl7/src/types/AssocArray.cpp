@@ -899,8 +899,74 @@ String& AssocArray::getString(const String &key) const
 {
 	Variant *node=findInternal(key);
 	if (!node) throw KeyNotFoundException(key);
+	if (!node->isString()) throw TypeConversionException("%s is not a String",(const char*)key);
 	return node->toString();
 }
+
+String& AssocArray::getString(const String &key, String &default_value) const
+{
+	Variant *node=findInternal(key);
+	if (!node) return default_value;
+	if (node->isString() || node->isWideString()) return node->toString();
+	return default_value;
+}
+
+int AssocArray::getInt(const String &key) const
+{
+	Variant *node=findInternal(key);
+	if (!node) throw KeyNotFoundException(key);
+	if (node->isString()) return node->toString().toInt();
+	if (node->isWideString()) return node->toWideString().toInt();
+	throw TypeConversionException("%s cannot be converted to Int",(const char*)key);
+}
+
+int AssocArray::getInt(const String &key, int default_value) const
+{
+	Variant *node=findInternal(key);
+	if (!node) return default_value;
+	if (node->isString()) return node->toString().toInt();
+	if (node->isWideString()) return node->toWideString().toInt();
+	return default_value;
+}
+
+long long AssocArray::getLongLong(const String &key) const
+{
+	Variant *node=findInternal(key);
+	if (!node) throw KeyNotFoundException(key);
+	if (node->isString()) return node->toString().toLongLong();
+	if (node->isWideString()) return node->toWideString().toLongLong();
+	throw TypeConversionException("%s cannot be converted to long long int",(const char*)key);
+}
+
+long long AssocArray::getLongLong(const String &key, long long default_value) const
+{
+	Variant *node=findInternal(key);
+	if (!node) return default_value;
+	if (node->isString()) return node->toString().toLongLong();
+	if (node->isWideString()) return node->toWideString().toLongLong();
+	return default_value;
+}
+
+
+/*!\brief Key vorhanden und True
+ *
+ * \desc
+ * Liefert True zurück, wenn der Schlüssel \b key vorhanden ist,
+ * und dessen Value einen String oder WideString enthält, dessen
+ * Boolean Wert True entspricht.
+ *
+ * @param key Name des Schlüssels
+ * @return True oder False
+ */
+bool AssocArray::isTrue(const String &key) const
+{
+	Variant *node=findInternal(key);
+	if (!node) return false;
+	if (node->isString()) return node->toString().isTrue();
+	if (node->isWideString()) return node->toWideString().isTrue();
+	return false;
+}
+
 
 /*!\brief AssocArray auslesen
  *
@@ -911,11 +977,36 @@ String& AssocArray::getString(const String &key) const
  * \exception InvalidKeyException: Ungültiger Schlüssel
  * \exception KeyNotFoundException: Schlüssel wurde nicht gefunden
  */
-AssocArray& AssocArray::getArray(const String &key) const
+AssocArray& AssocArray::getAssocArray(const String &key) const
 {
 	Variant *node=findInternal(key);
 	if (!node) throw KeyNotFoundException(key);
+	if (!node->isAssocArray()) throw TypeConversionException("%s is not an AssocArray",(const char*)key);
 	return node->toAssocArray();
+}
+
+AssocArray& AssocArray::getAssocArray(const String &key, AssocArray &default_value) const
+{
+	Variant *node=findInternal(key);
+	if (!node) return default_value;
+	if (node->isAssocArray()) return node->toAssocArray();
+	return default_value;
+}
+
+Array& AssocArray::getArray(const String &key) const
+{
+	Variant *node=findInternal(key);
+	if (!node) throw KeyNotFoundException(key);
+	if (!node->isArray()) throw TypeConversionException("%s is not an Array",(const char*)key);
+	return node->toArray();
+}
+
+Array& AssocArray::getArray(const String &key, Array &default_value) const
+{
+	Variant *node=findInternal(key);
+	if (!node) return default_value;
+	if (node->isArray()) return node->toArray();
+	return default_value;
 }
 
 

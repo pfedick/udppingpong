@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include <limits.h>
 
-#include "../include/udpecho.h"
+#include "udpecho.h"
 
 UDPEchoSender::UDPEchoSender()
 {

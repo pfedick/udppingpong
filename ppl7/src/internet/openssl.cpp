@@ -187,6 +187,25 @@ static unsigned long id_function(void)
 	return (unsigned long) ppl7::ThreadID();
 }
 
+/*
+static CRYPTO_dynlock_value *dyn_create_function(char *file, int line)
+{
+	return (CRYPTO_dynlock_value *) new ppl7::Mutex;
+}
+
+static void dyn_lock_function (int mode, CRYPTO_dynlock_value *l, const char *file, int line)
+{
+	if (mode & CRYPTO_LOCK)
+			((ppl7::Mutex*)l)->lock();
+		else
+			((ppl7::Mutex*)l)->unlock();
+}
+
+static void dyn_destroy_function (CRYPTO_dynlock_value *l, const char *file, int line)
+{
+	delete ((ppl7::Mutex*)l);
+}
+*/
 
 /*
 static void ssl_exit()
@@ -273,6 +292,11 @@ void SSL_Init()
 	}
 	CRYPTO_set_id_callback(id_function);
 	CRYPTO_set_locking_callback(locking_function);
+	/*
+	CRYPTO_set_dynlock_create_callback(dyn_create_function);
+	CRYPTO_set_dynlock_lock_callback(dyn_lock_function);
+	CRYPTO_set_dynlock_destroy_callback(dyn_destroy_function);
+	*/
 	SSLisInitialized=true;
 	atexit(SSL_Exit);
 	SSLMutex.unlock();
@@ -309,6 +333,9 @@ void SSL_Exit()
 		}
 		CRYPTO_set_id_callback(NULL);
 		CRYPTO_set_locking_callback(NULL);
+		CRYPTO_set_dynlock_create_callback(NULL);
+		CRYPTO_set_dynlock_lock_callback(NULL);
+		CRYPTO_set_dynlock_destroy_callback(NULL);
 		if (mutex_buf) {
 			int max_locks=CRYPTO_num_locks();
 			for (int i=0;i<max_locks;i++) {
@@ -462,13 +489,6 @@ void SSLContext::init(SSL_METHOD method)
 #ifndef HAVE_OPENSSL
 	throw UnsupportedFeatureException("OpenSSL");
 #else
-	SSLMutex.lock();
-	if (!SSLisInitialized) {
-		SSLMutex.unlock();
-		SSL_Init();
-	} else {
-		SSLMutex.unlock();
-	}
 	shutdown();
 	mutex.lock();
 	if (!method) method=SSLContext::TLS;
@@ -714,6 +734,43 @@ void SSLContext::setCipherList(const String &cipherlist)
 #endif
 }
 
+void SSLContext::setTmpDHParam(const String &dh_param_file)
+{
+#ifndef HAVE_OPENSSL
+	throw UnsupportedFeatureException("OpenSSL");
+#else
+	mutex.lock();
+	if (!ctx) {
+		mutex.unlock();
+		throw SSLContextUninitializedException();
+	}
+	FILE *ff=NULL;
+#ifdef WIN32
+	WideString wideFilename=dh_param_file;
+	WideString wideMode=L"r";
+	if ((ff=(FILE*)_wfopen((const wchar_t *)wideFilename,(const wchar_t*)wideMode))==NULL) {
+
+#else
+	if ((ff=(FILE*)fopen((const char*)dh_param_file,"r"))==NULL) {
+#endif
+		int e=errno;
+		mutex.unlock();
+		throwExceptionFromErrno(e,dh_param_file);
+	}
+	DH *dh=PEM_read_DHparams(ff, NULL, NULL, NULL);
+	if (!dh) {
+		mutex.unlock();
+		throw SSLFailedToReadDHParams(dh_param_file);
+	}
+	if (!SSL_CTX_set_tmp_dh((SSL_CTX*)ctx,dh)) {
+		mutex.unlock();
+		throw SSLFailedToReadDHParams(dh_param_file);
+	}
+	mutex.unlock();
+#endif
+}
+
+
 
 /** @name SSL-Verschlüsselung
  *  Die nachfolgenden Befehle werden benötigt, wenn die Kommunikation zwischen Client
@@ -936,18 +993,27 @@ void TCPSocket::sslAccept(SSLContext &context)
 	if (1 != SSL_set_fd((SSL*)ssl,s->sd)) {
 		String sslerrorstack;
 		GetSSLErrors(sslerrorstack);
+		context.releaseSSL(ssl);
+		ssl=NULL;
 		throw SSLException("SSL_set_fd failed [%s]", (const char*)sslerrorstack);
 	}
+	SSL_set_accept_state((SSL*)ssl);
 	int res=SSL_accept((SSL*)ssl);
 	if (res<1) {
 		int e=SSL_get_error((SSL*)ssl,res);
 		if (e==SSL_ERROR_WANT_READ || e==SSL_ERROR_WANT_WRITE) {
 			// Non-Blocking
+			context.releaseSSL(ssl);
+			ssl=NULL;
 			throw OperationBlockedException();
 		} else {
+			printf("e=%d\n",e);
 			String sslerrorstack;
 			GetSSLErrors(sslerrorstack);
-			throw SSLException("%s, %s [%s]",ssl_geterror((SSL*)ssl,res),
+			const char *errortext=ssl_geterror((SSL*)ssl,res);
+			context.releaseSSL(ssl);
+			ssl=NULL;
+			throw SSLException("%s, %s [%s]",errortext,
 					ERR_error_string(e,NULL),
 					(const char*)sslerrorstack);
 		}
@@ -956,6 +1022,43 @@ void TCPSocket::sslAccept(SSLContext &context)
 	throw UnsupportedFeatureException("OpenSSL");
 #endif
 }
+
+/*!\brief Auf eine TLS/SSL-Handshake warten
+
+ * \desc
+ * SSL_WaitForAccept wartet darauf, dass der mit dem Socket verbundene Client eine TLS/SSL Verbindung
+ * startet. Vor Aufruf sollte der Socket auf "non-Blocking" gestellt werden (siehe TCPSocket::setBlocking).
+ * Die Funktion wartet solange, bis entweder ein Handshake zustande kommt oder der angegebene Timeout
+ * erreicht wurde, oder der Überwachungsthread (siehe CTCPSocket::WatchThread)
+ * beendet werden soll.
+ *
+ * @param timeout_ms Ein Timeout in Millisekunden. Bei Angabe von 0, wartet die Funktion unbegenzt lange.
+ */
+void TCPSocket::sslWaitForAccept(SSLContext &context, int timeout_ms)
+{
+	try {
+	ppluint64 tt=GetMilliSeconds()+timeout_ms;
+	while (timeout_ms==0 || GetMilliSeconds()<=tt) {
+		if (stoplisten) {
+
+			printf ("stop\n");
+			throw ppl7::OperationAbortedException("TCPSocket::sslWaitForAccept");
+		}
+		try {
+			sslAccept(context);
+			return;
+		} catch (const ppl7::OperationBlockedException &exp) {
+			printf ("Blocked\n");
+			MSleep(10);
+		}
+	}
+	throw ppl7::TimeoutException("Timeout while waiting for SSL handshake [TCPSocket::sslWaitForAccept]");
+	} catch (const ppl7::Exception &exp) {
+		exp.print();
+				throw;
+	}
+}
+
 
 
 /*!\brief SSL-Zertifikat der Gegenstelle prüfen
@@ -1071,46 +1174,43 @@ void TCPSocket::sslCheckCertificate(const ppl7::String &name, bool AcceptSelfSig
 #endif
 }
 
-#ifdef TODO
-/*!\brief Auf eine TLS/SSL-Handshake warten
 
- * \desc
- * SSL_WaitForAccept wartet darauf, dass der mit dem Socket verbundene Client eine TLS/SSL Verbindung
- * startet. Vor AUfruf sollte der Socket auf "non-Blocking" gestellt werden (siehe CTCPSocket::SetBlocking).
- * Die Funktion wartet solange, bis entweder ein Handshake zustande kommt, der angegebene Timeout
- * erreicht oder die Verbindung getrennt wurde, oder der Überwachungsthread (siehe CTCPSocket::WatchThread)
- * beendet werden soll.
- *
- * @param timeout Ein Timeout in Sekunden. Bei Angabe von 0, wartet die Funktion unbegenzt lange.
- * @return Bei erfolgreichem Handshake liefert die Funktion 1 zurück, im Fehlerfall 0.
- */
-int CTCPSocket::SSL_WaitForAccept(int timeout)
+
+bool TCPSocket::sslIsEncrypted() const
 {
-	ppluint64 tt=GetMilliSeconds()+(timeout*1000);
-	while (timeout==0 || GetMilliSeconds()<=tt) {
-		if (thread) {
-			if (thread->ThreadShouldStop()) {
-				SetError(336);
-				return 0;
-			}
-		}
-		if (!SSL_Accept()) {
-			if (ppl6::GetErrorCode()!=309) {	// Non-Blocking
-				return 0;
-			}
-		} else {
-			return 1;
-		}
-		MSleep(10);
-	}
-	SetError(174);
+#ifdef HAVE_OPENSSL
+	if (ssl) return true;
+#endif
+	return false;
+}
+
+String TCPSocket::sslGetCipherName() const
+{
+#ifdef HAVE_OPENSSL
+	if (ssl) return SSL_get_cipher((SSL*)ssl);
+#endif
+	return String();
+}
+
+String TCPSocket::sslGetCipherVersion() const
+{
+#ifdef HAVE_OPENSSL
+	if (ssl) return SSL_get_cipher_version((SSL*)ssl);
+#endif
+	return String();
+}
+
+int TCPSocket::sslGetCipherBits() const
+{
+#ifdef HAVE_OPENSSL
+	int np=0;
+	if (ssl) return SSL_get_cipher_bits((SSL*)ssl, &np);
+#endif
 	return 0;
 }
 
 
 
-
-#endif
 //@}
 
 } // EOF namespace ppl

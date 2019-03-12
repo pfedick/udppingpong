@@ -585,7 +585,7 @@ PACKAGE_STRING='dnsperftest 1.0.0'
 PACKAGE_BUGREPORT='fedick@denic.de'
 PACKAGE_URL=''
 
-ac_unique_file="CommonLib/include/dnsperftest_sensor.h"
+ac_unique_file="src/bouncer.cpp"
 ac_unique_file="ppl7/include/ppl7.h"
 ac_unique_file="ppl7/include/config.h.in"
 # Factoring default headers for most tests.
@@ -2635,12 +2635,6 @@ ac_configure="$SHELL $ac_aux_dir/configure"  # Please don't use this var.
 #DNSPerfTest
 
 ac_config_files="$ac_config_files Makefile"
-
-ac_config_files="$ac_config_files CommonLib/Makefile"
-
-ac_config_files="$ac_config_files dstress/Makefile"
-
-ac_config_files="$ac_config_files UdpPingPong/Makefile"
 
 ac_config_headers="$ac_config_headers include/config.h"
 
@@ -5258,7 +5252,7 @@ fi
 case "$host_os" in
 	freebsd* )
 		CFLAGS="-I/usr/local/include $CFLAGS"
-		LDFLAGS="-L/usr/local/lib $LDFLAGS"
+		LDFLAGS="-L/usr/local/lib $LDFLAGS -lkvm"
   		;;
 esac
 
@@ -11891,9 +11885,6 @@ for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
-    "CommonLib/Makefile") CONFIG_FILES="$CONFIG_FILES CommonLib/Makefile" ;;
-    "dstress/Makefile") CONFIG_FILES="$CONFIG_FILES dstress/Makefile" ;;
-    "UdpPingPong/Makefile") CONFIG_FILES="$CONFIG_FILES UdpPingPong/Makefile" ;;
     "include/config.h") CONFIG_HEADERS="$CONFIG_HEADERS include/config.h" ;;
     "ppl7/Makefile") CONFIG_FILES="$CONFIG_FILES ppl7/Makefile" ;;
     "ppl7/include/config.h") CONFIG_HEADERS="$CONFIG_HEADERS ppl7/include/config.h" ;;

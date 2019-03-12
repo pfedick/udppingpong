@@ -1,42 +1,79 @@
+EXTRA_CFLAGS = 
+INCLUDE	= -I. -Iinclude -I../ppl7/include
+CFLAGS		=  -ggdb -O2 -Wall  $(INCLUDE) @CFLAGS@ @DEFS@  @PTHREAD_CFLAGS@ \
+	@ZLIB_CFLAGS@ @BZ2_CFLAGS@ @PCRE_CFLAGS@ @OPENSSL_INCLUDES@ @ICONV_CFLAGS@  \
+	$(EXTRA_CFLAGS)
+LIBS = ppl7/release/libppl7.a @OPENSSL_LDFLAGS@ @OPENSSL_LIBS@ @LIBS@ @PTHREAD_CFLAGS@ @PTHREAD_LIBS@ \
+	@ZLIB_LIBS@ @BZ2_LIBS@ @PCRE_LIBS@ @ICONV_LIBS@  -lrt -lstdc++
+
 MAKE = @MAKECMD@
-prefix	?= @prefix@
-exec_prefix	= @exec_prefix@
+
 TARGETBIN	?= @bindir@
 
+OBJECTS_SENDER = build/UDPEchoSender.o build/UDPEchoSenderThread.o build/UDPEchoReceiverThread.o \
+	build/sender.o
+	
+OBJECTS_BOUNCER = build/UDPEchoBouncer.o build/UDPEchoBouncerThread.o build/UDPEchoCounter.o build/SampleSensorData.o \
+	build/bouncer.o
 
-all: dstress udppingpong
+all: pingpong_sender pingpong_bouncer
+
 
 install: dstress udppingpong
-	cp dstress/dstress $(TARGETBIN)
 	cp UdpPingPong/pingpong_sender $(TARGETBIN)
 	cp UdpPingPong/pingpong_bouncer $(TARGETBIN)
-	
-	
+
 uninstall:
-	rm -rf $(TARGETBIN)/dstress
 	rm -rf $(TARGETBIN)/pingpong_sender
 	rm -rf $(TARGETBIN)/pingpong_bouncer
 
-ppl7/release/libppl7.a: ppl7/Makefile
-	cd ppl7; $(MAKE)
-
-CommonLib/build/libdnsperftest.a: ppl7/release/libppl7.a CommonLib/Makefile
-	cd CommonLib; $(MAKE)
-
-	
-dstress: ppl7/release/libppl7.a  CommonLib/build/libdnsperftest.a dstress/Makefile
-	cd dstress; $(MAKE)
-
-udppingpong: ppl7/release/libppl7.a  CommonLib/build/libdnsperftest.a UdpPingPong/Makefile
-	cd UdpPingPong; $(MAKE)
-
-
-
-
 clean:
 	rm -rf ppl7/release
-	cd CommonLib; $(MAKE) clean
-	cd UdpPingPong; $(MAKE) clean
-	cd dstress; $(MAKE) clean
-	cd Agent; $(MAKE) clean
-	cd Cli; $(MAKE) clean
+	rm -rf build
+
+ppl7/release/libppl7.a: ppl7/Makefile
+	cd ppl7; $(MAKE) release/libppl7.a
+
+pingpong_sender: $(OBJECTS_SENDER) Makefile ppl7/release/libppl7.a
+	$(CXX) -O -o pingpong_sender $(CFLAGS)  $(OBJECTS_SENDER) $(LIBS)
+
+pingpong_bouncer: $(OBJECTS_BOUNCER) Makefile ppl7/release/libppl7.a
+	$(CXX) -O -o pingpong_bouncer $(CFLAGS) $(OBJECTS_BOUNCER) $(LIBS)
+
+
+build/sender.o: src/sender.cpp Makefile include/udpecho.h include/sender.h
+	mkdir -p build
+	$(CXX) $(CFLAGS) -o build/sender.o -c src/sender.cpp
+
+build/bouncer.o: src/bouncer.cpp Makefile include/udpecho.h
+	mkdir -p build
+	$(CXX) $(CFLAGS) -o build/bouncer.o -c src/bouncer.cpp
+
+build/UDPEchoBouncer.o: src/UDPEchoBouncer.cpp Makefile include/udpecho.h
+	mkdir -p build
+	$(CXX) $(CFLAGS) -o build/UDPEchoBouncer.o -c src/UDPEchoBouncer.cpp
+
+build/UDPEchoBouncerThread.o: src/UDPEchoBouncerThread.cpp Makefile include/udpecho.h
+	mkdir -p build
+	$(CXX) $(CFLAGS) -o build/UDPEchoBouncerThread.o -c src/UDPEchoBouncerThread.cpp
+	
+build/UDPEchoCounter.o: src/UDPEchoCounter.cpp Makefile include/udpecho.h
+	mkdir -p build
+	$(CXX) $(CFLAGS) -o build/UDPEchoCounter.o -c src/UDPEchoCounter.cpp
+	
+build/UDPEchoSender.o: src/UDPEchoSender.cpp Makefile include/sender.h
+	mkdir -p build
+	$(CXX) $(CFLAGS) -o build/UDPEchoSender.o -c src/UDPEchoSender.cpp
+
+build/UDPEchoSenderThread.o: src/UDPEchoSenderThread.cpp Makefile include/sender.h
+	mkdir -p build
+	$(CXX) $(CFLAGS) -o build/UDPEchoSenderThread.o -c src/UDPEchoSenderThread.cpp
+	
+build/UDPEchoReceiverThread.o: src/UDPEchoReceiverThread.cpp Makefile include/udpecho.h
+	mkdir -p build
+	$(CXX) $(CFLAGS) -o build/UDPEchoReceiverThread.o -c src/UDPEchoReceiverThread.cpp
+
+build/SampleSensorData.o: src/SampleSensorData.cpp Makefile include/udpecho.h
+	mkdir -p build
+	$(CXX) $(CFLAGS) -o build/SampleSensorData.o -c src/SampleSensorData.cpp
+	

@@ -959,6 +959,25 @@ size_t TCPSocket::read(ByteArray &buffer, size_t bytes)
 	}
 }
 
+
+void TCPSocket::readLoop(void *buffer, size_t bytes, int timeout_seconds, Thread *watch_thread)
+{
+	size_t todo=bytes;
+	unsigned char *ptr=(unsigned char*)buffer;
+	ppluint64 timeout=ppl7::GetMilliSeconds()+timeout_seconds*1000;
+	while (todo>0) {
+		if (watch_thread) {
+			if (watch_thread->threadShouldStop()) throw OperationAbortedException("TCPSocket::readLoop");
+		}
+		if (waitForIncomingData(0,200000)) {
+			size_t recevied=read(ptr,todo);
+			todo-=recevied;
+			ptr+=recevied;
+		}
+		if (timeout_seconds>0 && ppl7::GetMilliSeconds()>timeout) throw ppl7::TimeoutException("TCPSocket::readLoop");
+	}
+}
+
 /*!\brief Bei Lesezugriffen blockieren
  *
  * \desc

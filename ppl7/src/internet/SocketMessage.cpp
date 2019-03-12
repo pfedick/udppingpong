@@ -275,6 +275,9 @@ void SocketMessage::readFromPacketHeader(const char *msgbuffer, int &flags)
 
 }
 
+
+//#define DEBUG_LOG 1
+
 size_t TCPSocket::write(const SocketMessage &msg)
 /*!\brief Nachricht verschicken
  *
@@ -305,8 +308,16 @@ size_t TCPSocket::write(const SocketMessage &msg)
 	size_t headersize=24;
 	msg.compilePacketHeader(header,&headersize,msg_payload,msg_size,is_compressed);
 	size_t bytes_send=0;
+#ifdef DEBUG_LOG
+	printf ("Send Header:\n");
+	ppl7::HexDump(header,headersize);
+#endif
 	bytes_send+=write(header,headersize);
 	if (msg_size) {
+#ifdef DEBUG_LOG
+		printf ("Send Payload:\n");
+		ppl7::HexDump(msg_payload,msg_size);
+#endif
 		bytes_send+=write(msg_payload,msg_size);
 	}
 	return bytes_send;
@@ -338,10 +349,18 @@ bool TCPSocket::waitForMessage(SocketMessage &msg, int timeout_seconds, Thread *
 		if (!waitForIncomingData(0,100000)) continue;
 
 		// Datenpaket vorhanden
-		if (this->read(msgbuffer,20)!=20) return false;
+		this->readLoop(msgbuffer, 20, timeout_seconds, watch_thread);
 		msg.Version=PeekN8(msgbuffer+1);
+#ifdef DEBUG_LOG
+		printf ("received Header:\n");
+		HexDump(msgbuffer,20);
+#endif
 		if (msgbuffer[0]=='V' && msg.Version==2) {
-			if (this->read(msgbuffer+20,4)!=4) return false;
+			this->readLoop(msgbuffer+20,4, timeout_seconds, watch_thread);
+#ifdef DEBUG_LOG
+			printf ("received additional Header:\n");
+			HexDump(msgbuffer+20,4);
+#endif
 		} else if (msgbuffer[0]!='V' || msg.Version!=1) {
 			throw SocketMessage::InvalidProtocolVersion();
 		}
@@ -350,10 +369,17 @@ bool TCPSocket::waitForMessage(SocketMessage &msg, int timeout_seconds, Thread *
 		if (msg.payload_size) {
 			buffer=malloc(msg.payload_size);
 			if (!buffer) throw OutOfMemoryException();
-			if (this->read(buffer,msg.payload_size)!=msg.payload_size) {
+			try {
+				this->readLoop(buffer,msg.payload_size, timeout_seconds, watch_thread);
+			} catch (...) {
 				free(buffer);
-				throw SocketMessage::InvalidPacketException("Packet incomplete");
+				throw;
 			}
+#ifdef DEBUG_LOG
+			printf ("received Payload:\n");
+			HexDump(buffer,msg.payload_size);
+#endif
+
 			if (msg.Version>1) {	// CRC prüfen
 				if (PeekN32(msgbuffer+16)!=Crc32(buffer,msg.payload_size)) {
 					free(buffer);

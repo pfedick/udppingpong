@@ -78,7 +78,6 @@ PPL7EXCEPTION(InvalidIpAddressException,NetworkException);
 PPL7EXCEPTION(InvalidNetworkAddressException,NetworkException);
 PPL7EXCEPTION(InvalidNetmaskOrPrefixlenException,NetworkException);
 
-
 PPL7EXCEPTION(ResolverException,Exception);
 PPL7EXCEPTION(UnknownHostException,Exception);
 
@@ -301,6 +300,7 @@ class SSLContext
 		void	loadTrustedCAfromPath(const String &path);
 		void	loadCertificate(const String &certificate, const String &privatekey=String(), const String &password=String());
 		void	setCipherList(const String &cipherlist);		// "ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH"
+		void	setTmpDHParam(const String &dh_param_file);
 };
 
 class SSLError
@@ -444,6 +444,8 @@ class TCPSocket
 		size_t read(String &buffer, size_t bytes);
 		size_t read(ByteArray &buffer, size_t bytes);
 
+		void readLoop(void *buffer, size_t bytes, int timeout_seconds=0, Thread *watch_thread=NULL);
+
 		int getDescriptor();
 		void setBlocking(bool value);
 		bool isBlocking() const;
@@ -457,11 +459,16 @@ class TCPSocket
 
 		//! @name SSL Encryption
 		//@{
-		void sslStart(SSLContext &context);
-		void sslStop();
-		void sslCheckCertificate(const ppl7::String &name, bool AcceptSelfSignedCert=false);
-		void sslAccept(SSLContext &context);
-		int sslWaitForAccept(int timeout=0);
+		void	sslStart(SSLContext &context);
+		void	sslStop();
+		void	sslCheckCertificate(const ppl7::String &name, bool AcceptSelfSignedCert=false);
+		void	sslAccept(SSLContext &context);
+		void	sslWaitForAccept(SSLContext &context, int timeout_ms=0);
+		bool	sslIsEncrypted() const;
+		String	sslGetCipherName() const;
+		String	sslGetCipherVersion() const;
+		int		sslGetCipherBits() const;
+
 		//@}
 
 
@@ -692,7 +699,7 @@ class WikiParser
 	private:
 		int ispre;
 		int ullevel;
-		int ollevel;
+		size_t ollevel;
 		int indexcount;
 		int intable;
 		int inrow;

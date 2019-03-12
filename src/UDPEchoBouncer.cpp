@@ -11,7 +11,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#include "../include/udpecho.h"
+#include "udpecho.h"
 
 /*!\class UDPEchoBouncer
  * \ingroup GroupBouncer

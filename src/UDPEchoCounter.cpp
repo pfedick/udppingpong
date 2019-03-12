@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include <limits.h>
 
-#include "dnsperftest_sensor.h"
+#include "udpecho.h"
 
 void UDPEchoCounter::clear()
 {

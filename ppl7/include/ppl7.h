@@ -232,8 +232,8 @@ String Replace(const String &string, const String &search, const String &replace
 String Transcode(const char * str, size_t size, const String &fromEncoding, const String &toEncoding);
 String Transcode(const String &str, const String &fromEncoding, const String &toEncoding);
 bool IsTrue(const String &str);
-Array StrTok(const String &string, const String &div);
-void StrTok(Array &result, const String &string, const String &div);
+Array StrTok(const String &string, const String &div=String("\n"));
+void StrTok(Array &result, const String &string, const String &div=String("\n"));
 
 String GetArgv (int argc, char * argv[], const String &argument);
 bool HaveArgv (int argc, char * argv[], const String &argument);

@@ -1,53 +1,64 @@
-#include <string.h>
-#include <stdio.h>
+#include <ppl7.h>
+#include <ppl7-inet.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <unistd.h>
-#include <netinet/in.h>
-#include <netinet/ip.h>
-#include <netinet/udp.h>
-#include <arpa/inet.h>
-#include <arpa/nameser.h>
-#include <resolv.h>
-#include <math.h>
+#include <time.h>
+#include <sys/time.h>
 #include <errno.h>
 
-#include "dstress.h"
+#include "udpecho.h"
+
+
+/*!@file
+ * \ingroup GroupSender
+ */
+
+
+/*!\brief Globaler Mutex für die Paket-ID
+ *
+ */
+ppl7::Mutex PacketIdMutex;
+
+/*!\brief Globaler Zähler für die Paket-ID
+ *
+ */
+ppluint64 PacketId=0;
+
+
+/*!\class SenderThread
+ * \ingroup GroupSender
+ * \brief Worker-Thread des Senders
+ *
+ */
+
 
 /*!\brief Konstruktor
  *
  * Einige interne Variablen werden mit dem Default-Wert befüllt.
  */
-DNSSenderThread::DNSSenderThread()
+UDPEchoSenderThread::UDPEchoSenderThread()
 {
-	buffer=(unsigned char*)malloc(4096);
-	if (!buffer) throw ppl7::OutOfMemoryException();
-	Zeitscheibe=0.0f;
+	packetsize=512;
 	runtime=10;
 	timeout=5;
-	queryrate=0;
-	counter_packets_send=0;
-	counter_bytes_send=0;
+	counter_send=0;
 	errors=0;
 	counter_0bytes=0;
 	duration=0.0;
+	ignoreResponses=true;
 	for (int i=0;i<255;i++) counter_errorcodes[i]=0;
 	verbose=false;
-	spoofingEnabled=false;
-	DnssecRate=0;
-	dnsseccounter=0;
-	payload=NULL;
-	spoofing_net_start=0;
-	spoofing_net_size=0;
+	alwaysRandomize=false;
 }
 
 /*!\brief Destruktor
  *
  * Stoppt den ReceiverThread (sofern er noch läuft) und schließt den Socket.
  */
-DNSSenderThread::~DNSSenderThread()
+UDPEchoSenderThread::~UDPEchoSenderThread()
 {
-	free(buffer);
+	receiver.threadStop();
+	Socket.disconnect();
 }
 
 
@@ -55,16 +66,19 @@ DNSSenderThread::~DNSSenderThread()
  *
  * @param destination String mit Zieladresse und Port
  */
-void DNSSenderThread::setDestination(const ppl7::IPAddress &ip, int port)
+void UDPEchoSenderThread::setDestination(const ppl7::String &destination)
 {
-	Socket.setDestination(ip, port);
-	pkt.setDestination(ip, port);
+	this->destination=destination;
 }
 
-
-void DNSSenderThread::setPayload(PayloadFile &payload)
+/*!\brief Paketgröße setzen
+ *
+ * Setzt die Paketgröße
+ * @param size Paketgröße in Bytes
+ */
+void UDPEchoSenderThread::setPacketsize(size_t size)
 {
-	this->payload=&payload;
+	packetsize=size;
 }
 
 /*!\brief Laufzeit festlegen
@@ -73,7 +87,7 @@ void DNSSenderThread::setPayload(PayloadFile &payload)
  *
  * @param seconds Laufzeit
  */
-void DNSSenderThread::setRuntime(int seconds)
+void UDPEchoSenderThread::setRuntime(int seconds)
 {
 	runtime=seconds;
 }
@@ -85,14 +99,9 @@ void DNSSenderThread::setRuntime(int seconds)
  *
  * @param seconds Timeout
  */
-void DNSSenderThread::setTimeout(int seconds)
+void UDPEchoSenderThread::setTimeout(int seconds)
 {
 	timeout=seconds;
-}
-
-void DNSSenderThread::setDNSSECRate(int rate)
-{
-	DnssecRate=rate;
 }
 
 /*!\brief Gewünschte Query-Rate pro Sekunde einstellen
@@ -103,7 +112,7 @@ void DNSSenderThread::setDNSSECRate(int rate)
  *
  * @param qps Queries pro Sekunde
  */
-void DNSSenderThread::setQueryRate(ppluint64 qps)
+void UDPEchoSenderThread::setQueryRate(ppluint64 qps)
 {
 	queryrate=qps;
 }
@@ -121,7 +130,7 @@ void DNSSenderThread::setQueryRate(ppluint64 qps)
  * @exception ppl7::InvalidArgumentsException Wird geworfen, wenn der Wert \p ms nicht den
  * genannten kriterien entspricht.
  */
-void DNSSenderThread::setZeitscheibe(float ms)
+void UDPEchoSenderThread::setZeitscheibe(float ms)
 {
 	if (ms==0.0f || ms >1000.0f) throw ppl7::InvalidArgumentsException();
 	//if ((1000 % ms)!=0) throw ppl7::InvalidArgumentsException();
@@ -129,24 +138,48 @@ void DNSSenderThread::setZeitscheibe(float ms)
 }
 
 
-void DNSSenderThread::setSourceIP(const ppl7::IPAddress &ip)
+/*!\brief Antwortpakete ignorieren
+ *
+ * Falls gesetzt, werden nur Pakete rausgeschickt, die Antworten aber ignoriert
+ *
+ * @param flag True oder False
+ */
+void UDPEchoSenderThread::setIgnoreResponses(bool flag)
 {
-	sourceip=ip;
-	spoofingEnabled=false;
+	ignoreResponses=flag;
 }
 
-void DNSSenderThread::setSourceNet(const ppl7::IPNetwork &net)
+void UDPEchoSenderThread::setSourceIP(const ppl7::String &ip)
 {
-	sourcenet=net;
-	spoofingEnabled=true;
-	spoofing_net_start=ntohl(*(in_addr_t*)net.first().addr());
-	spoofing_net_size=powl(2,32-net.prefixlen());
+	Socket.setSource(ip);
 }
 
-void DNSSenderThread::setVerbose(bool verbose)
+void UDPEchoSenderThread::setVerbose(bool verbose)
 {
 	this->verbose=verbose;
 }
+
+void UDPEchoSenderThread::setAlwaysRandomize(bool flag)
+{
+	this->alwaysRandomize=flag;
+}
+
+bool UDPEchoSenderThread::socketReady()
+{
+	fd_set wset;
+	struct timeval timeout;
+	timeout.tv_sec=0;
+	timeout.tv_usec=100;
+	FD_ZERO(&wset);
+	FD_SET(sockfd,&wset); // Wir wollen nur prüfen, ob wir schreiben können
+	int ret=select(sockfd+1,NULL,&wset,NULL,&timeout);
+	if (ret<0) return false;
+	if (FD_ISSET(sockfd,&wset)) {
+		return true;
+	}
+	return false;
+}
+
 
 
 /*!\brief Einzelnes Paket senden
@@ -156,45 +189,26 @@ void DNSSenderThread::setVerbose(bool verbose)
  * Uhrzeit des Servers. Anhand der Uhrzeit kann die Laufzeit eines rückkehrenden Pakets berechnet
  * werden.
  */
-void DNSSenderThread::sendPacket()
+void UDPEchoSenderThread::sendPacket()
 {
-	ppl7::ByteArrayPtr bap;
-	size_t query_size;
-	while (1) {
-		try {
-			bap=payload->getQuery();
-			query_size=bap.size();
-			memcpy(buffer,bap.ptr(),query_size);
-			dnsseccounter+=DnssecRate;
-			if (dnsseccounter>=100) {
-				query_size=AddDnssecToQuery(buffer,4096,query_size);
-				dnsseccounter-=100;
-			}
-			pkt.setPayload(buffer,query_size);
-			if (spoofingEnabled) {
-				pkt.randomSourceIP(spoofing_net_start, spoofing_net_size);
-				pkt.randomSourcePort();
-			}
-			pkt.setDnsId(getQueryTimestamp());
-			ssize_t n=Socket.send(pkt);
-			if (n>0 && (size_t)n==pkt.size()) {
-				counter_packets_send++;
-				counter_bytes_send+=pkt.size();
-			} else if (n<0) {
-				if (errno<255) counter_errorcodes[errno]++;
-				errors++;
-			} else {
-				counter_0bytes++;
-			}
-			return;
-		} catch (const UnknownRRType &exp) {
-		} catch (const InvalidDNSQuery &exp) {
+	PACKET *p=(PACKET*)buffer.ptr();
+	if (alwaysRandomize) {
+		char *b=(char*)p;
+		for (size_t i=0;i<packetsize;i++) {
+			b[i]=(char)ppl7::rand(0,255);
 		}
 	}
+	p->time=ppl7::GetMicrotime();
+	ssize_t n=::send(sockfd,p,packetsize,0);
+	if (n>0 && (size_t)n==packetsize) {
+		counter_send++;
+	} else if (n<0) {
+		if (errno<255) counter_errorcodes[errno]++;
+		errors++;
+	} else {
+		counter_0bytes++;
+	}
 }
-
-
-
 
 /*!\brief Worker-Thread
  *
@@ -205,15 +219,17 @@ void DNSSenderThread::sendPacket()
  * aufgerufen. Nach Ablauf der Laufzeit wird dann noch die Methode SenderThread::waitForTimeout
  * aufgerufen, bevor der Socket wieder geschlossen wird.
  */
-void DNSSenderThread::run()
+void UDPEchoSenderThread::run()
 {
-	if (!payload) throw ppl7::NullPointerException("payload nicht gesetzt!");
-	if (!spoofingEnabled) {
-		pkt.setSource(sourceip,0x4567);
-	}
-	dnsseccounter=0;
-	counter_packets_send=0;
-	counter_bytes_send=0;
+	buffer=ppl7::Random(packetsize);
+	Socket.connect(destination);
+	Socket.setBlocking(false);
+	sockfd=Socket.getDescriptor();
+	receiver.setSocketDescriptor(sockfd);
+	receiver.resetCounter();
+	if (!ignoreResponses)
+		receiver.threadStart();
+	counter_send=0;
 	counter_0bytes=0;
 	errors=0;
 	duration=0.0;
@@ -226,28 +242,29 @@ void DNSSenderThread::run()
 	}
 	duration=ppl7::GetMicrotime()-start;
 	waitForTimeout();
+	receiver.threadStop();
+	Socket.disconnect();
 }
-
 
 /*!\brief Generiert und empfängt soviele Pakete wie möglich
  *
  * In einer Endlosschleife werden permanent Pakete generiert und versenden.
  */
-void DNSSenderThread::runWithoutRateLimit()
+void UDPEchoSenderThread::runWithoutRateLimit()
 {
 	double start=ppl7::GetMicrotime();
 	double end=start+(double)runtime;
-	double now;
-	int pc=0;
+	double now,next_checktime=start+0.1;
 	while (1) {
-		sendPacket();
-		pc++;
-		if (pc>10000) {
-			pc=0;
-			if (this->threadShouldStop()) break;
-			now=ppl7::GetMicrotime();
-			if (now>end) break;
+		if (socketReady()) {
+			sendPacket();
 		}
+		now=ppl7::GetMicrotime();
+		if (now>next_checktime) {
+			next_checktime=now+0.1;
+			if (this->threadShouldStop()) break;
+		}
+		if (now>end) break;
 	}
 }
 
@@ -279,15 +296,13 @@ static inline double getNsec()
  * nicht erreichtwerden. Es liegt ein Bottleneck auf dem Lastgenerator vor. Dies dürfte in der Regel die
  * CPU sein.
  */
-void DNSSenderThread::runWithRateLimit()
+void UDPEchoSenderThread::runWithRateLimit()
 {
 	struct timespec ts;
 	ppluint64 total_zeitscheiben=runtime*1000/(Zeitscheibe*1000.0);
 	ppluint64 queries_rest=runtime*queryrate;
 	ppl7::SockAddr addr=Socket.getSockAddr();
-	verbose=true;
 	if (verbose) {
-		//printf ("qps=%d, runtime=%d\n",queryrate, runtime);
 		printf ("Laufzeit: %d s, Dauer Zeitscheibe: %0.6f s, Zeitscheiben total: %llu, Qpzs: %llu, Source: %s:%d\n",
 				runtime,Zeitscheibe,total_zeitscheiben,
 				queries_rest/total_zeitscheiben,
@@ -328,7 +343,7 @@ void DNSSenderThread::runWithRateLimit()
 		}
 	}
 	if (verbose) {
-		//printf ("total idle: %0.6f\n",total_idle);
+		printf ("total idle: %0.6f\n",total_idle);
 	}
 }
 
@@ -339,7 +354,7 @@ void DNSSenderThread::runWithRateLimit()
  * noch solange auf rückkehrende Pakete, bis der mittels SenderThread::setTimeout
  * eingestellte Timeout erreicht ist
  */
-void DNSSenderThread::waitForTimeout()
+void UDPEchoSenderThread::waitForTimeout()
 {
 	double start=ppl7::GetMicrotime();
 	double end=start+(double)timeout;
@@ -357,37 +372,82 @@ void DNSSenderThread::waitForTimeout()
  *
  * @return Anzahl Pakete
  */
-ppluint64 DNSSenderThread::getPacketsSend() const
+ppluint64 UDPEchoSenderThread::getPacketsSend() const
 {
-	return counter_packets_send;
+	return counter_send;
 }
 
-/*!\brief Anzahl gesendeter Bytes auslesen
+/*!\brief Anzahl empfangender Pakete auslesen
+ *
+ * @return Anzahl Pakete
+ */
+ppluint64 UDPEchoSenderThread::getPacketsReceived() const
+{
+	return receiver.getPacketsReceived();
+}
+
+/*!\brief Anzahl empfangender Bytes auslesen
  *
  * @return Anzahl Bytes
  */
-ppluint64 DNSSenderThread::getBytesSend() const
+ppluint64 UDPEchoSenderThread::getBytesReceived() const
 {
-	return counter_bytes_send;
+	return receiver.getBytesReceived();
 }
 
 /*!\brief Anzahl beim Senden aufgetretener Fehler auslesen
  *
  * @return Anzahl Fehler
  */
-ppluint64 DNSSenderThread::getErrors() const
+ppluint64 UDPEchoSenderThread::getErrors() const
 {
 	return errors;
 }
 
-ppluint64 DNSSenderThread::getCounter0Bytes() const
+ppluint64 UDPEchoSenderThread::getCounter0Bytes() const
 {
 	return counter_0bytes;
 }
 
-ppluint64 DNSSenderThread::getCounterErrorCode(int err) const
+ppluint64 UDPEchoSenderThread::getCounterErrorCode(int err) const
 {
 	if (err < 255) return counter_errorcodes[err];
 	return 0;}
 
+
+/*!\brief Tatsächliche Laufzeit des Tests auslesen
+ *
+ * @return Laufzeit in Sekunden, mit mikrosekundengenauen Nachkommastellen
+ */
+double UDPEchoSenderThread::getDuration() const
+{
+	return duration;
+}
+
+/*!\brief Durchschnittliche Paketlaufzeit auslesen
+ *
+ * @return Laufzeit in Sekunden, mit mikrosekundengenauen Nachkommastellen
+ */
+double UDPEchoSenderThread::getRoundTripTimeAverage() const
+{
+	return receiver.getRoundTripTimeAverage();
+}
+
+/*!\brief Minimale Paketlaufzeit auslesen
+ *
+ * @return Laufzeit in Sekunden, mit mikrosekundengenauen Nachkommastellen
+ */
+double UDPEchoSenderThread::getRoundTripTimeMin() const
+{
+	return receiver.getRoundTripTimeMin();
+}
+
+/*!\brief Maximale Paketlaufzeit auslesen
+ *
+ * @return Laufzeit in Sekunden, mit mikrosekundengenauen Nachkommastellen
+ */
+double UDPEchoSenderThread::getRoundTripTimeMax() const
+{
+	return receiver.getRoundTripTimeMax();
+}
 

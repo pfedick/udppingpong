@@ -1,5 +1,5 @@
-# DNSPerfTest
-Toolsuite for testing performance of nameserver infrastructure
+# UDPPingPong
+Measures UDP throughput
 
 # Build and install
 ./configure
@@ -14,11 +14,6 @@ somewhere else (e.g. /usr/bin), please use ./configure --prefix:
 # Uninstall
 make uninstall
 
-# dstress
-to be deocumented
-
-# udppingpong
-to be deocumented
 
 
 

@@ -536,16 +536,16 @@ Array StrTok(const String &string, const String &div)
  *
  * @param[out] result Array, in dem die Ergebnisstrings gespeichert werden
  * @param[in] string String, der zerlegt werden soll
- * @param[in] div String, der als Trenner verwendet wird
+ * @param[in] div String, der als Trenner verwendet wird. Default=Newline
  */
 void StrTok(Array &result, const String &string, const String &div)
 {
-	if (string.isEmpty()) throw EmptyDataException();
-	if (div.isEmpty()) throw EmptyDataException();
 	result.clear();
+	if (string.isEmpty()) return;
 	String Line;
 	Array a;
-	a.explode(string,div);
+	if (div.isEmpty()) a.explode(string,"\n");
+	else a.explode(string,div);
 	//printf ("StrTok: a.size=%ti\n",a.size());
 	for (size_t i=0;i<a.size();i++) {
 		Line=a[i];
