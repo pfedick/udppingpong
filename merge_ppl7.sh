@@ -10,19 +10,19 @@ fi
 rm -rf ppl7/* && mkdir -p ppl7/include
 
 cd $PPL7_DIR
-cp include/compat.h include/ppl7.h include/ppl7-algorithms.h include/ppl7-exceptions.h \
-   include/ppl7-inet.h include/ppl7-types.h include/prolog.h include/socket.h \
-   include/ppl7-crypto.h include/crypto.h \
-   include/threads.h include/config.h.in include/ppl7-config.h.in $WORK/ppl7/include
-find src/core/Compat.cpp src/core/Dir* src/core/Exceptions* src/core/File* \
+find include/compat.h include/ppl7.h include/ppl7-algorithms.h include/ppl7-exceptions.h \
+	include/ppl7-inet.h include/ppl7-types.h include/prolog.h include/socket.h \
+	include/ppl7-crypto.h include/crypto.h \
+	include/threads.h include/config.h.in include/ppl7-config.h.in $WORK/ppl7/include \
+	src/core/Compat.cpp src/core/Dir* src/core/Exceptions* src/core/File* \
 	src/core/Functions* src/core/MemFile* src/core/Mutex* src/core/Signal* \
 	src/core/String* src/core/Thread* src/core/Time* src/core/AVL* \
-	src/core/Memory* \
+	src/core/Memory* src/internet/resolver.cpp \
+	src/internet/inet* src/internet/ip* src/internet/openssl* \
+	src/internet/sock* src/internet/*Socket* src/math  src/types \
 	| cpio -pdmv $WORK/ppl7
-find src/internet/inet* src/internet/ip* src/internet/openssl* \
-   src/internet/sock* src/internet/*Socket* src/math  src/types | cpio -pdmv $WORK/ppl7
-find src/internet/resolver.cpp | cpio -pdmv $WORK/ppl7
 cp LICENSE.TXT $WORK/ppl7
+
 rm -rf $WORK/ppl7/src/core/Resourcen.cpp
 
 cp genMakefile.in $WORK/ppl7
