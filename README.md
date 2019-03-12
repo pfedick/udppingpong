@@ -1,5 +1,9 @@
 # UDPPingPong
-Measures UDP throughput
+Tools for measuring udp throughput:
+- pingpong_sender: generates packets of arbitrary size and amount and counts
+  the answers and throughput
+- pingpong_bouncer: recieves the packets on the other side and sends them back.
+
 
 # Build and install
 ./configure
