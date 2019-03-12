@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ(2.69)
-AC_INIT([dnsperftest], [1.0.0], [fedick@denic.de], [dnsperftest-1.0.0.tar.bz2])
+AC_INIT([udppingpong], [1.0.0], [fedick@denic.de], [udppingpong-1.0.0.tar.bz2])
 AC_CONFIG_AUX_DIR([autoconf])
 
 #DNSPerfTest

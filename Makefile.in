@@ -1,5 +1,5 @@
 EXTRA_CFLAGS = 
-INCLUDE	= -I. -Iinclude -I../ppl7/include
+INCLUDE	= -I. -Iinclude -Ippl7/include
 CFLAGS		=  -ggdb -O2 -Wall  $(INCLUDE) @CFLAGS@ @DEFS@  @PTHREAD_CFLAGS@ \
 	@ZLIB_CFLAGS@ @BZ2_CFLAGS@ @PCRE_CFLAGS@ @OPENSSL_INCLUDES@ @ICONV_CFLAGS@  \
 	$(EXTRA_CFLAGS)
@@ -19,7 +19,7 @@ OBJECTS_BOUNCER = build/UDPEchoBouncer.o build/UDPEchoBouncerThread.o build/UDPE
 all: pingpong_sender pingpong_bouncer
 
 
-install: dstress udppingpong
+install: pingpong_sender pingpong_bouncer
 	cp UdpPingPong/pingpong_sender $(TARGETBIN)
 	cp UdpPingPong/pingpong_bouncer $(TARGETBIN)
 
