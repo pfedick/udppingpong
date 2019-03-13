@@ -27,7 +27,7 @@
 #include <errno.h>
 #include <signal.h>
 
-#include "dnsperftest_sensor.h"
+#include "sensor.h"
 #include "udpecho.h"
 
 /*!@file
