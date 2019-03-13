@@ -699,7 +699,6 @@ PTHREAD_CFLAGS
 PTHREAD_LIBS
 PTHREAD_CC
 ax_pthread_config
-NOPIE
 am__fastdepCXX_FALSE
 am__fastdepCXX_TRUE
 CXXDEPMODE
@@ -5209,46 +5208,6 @@ fi
 
 
 
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C compiler accepts -no-pie" >&5
-$as_echo_n "checking whether C compiler accepts -no-pie... " >&6; }
-if ${ax_cv_check_cflags___no_pie+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-
-  ax_check_save_flags=$CFLAGS
-  CFLAGS="$CFLAGS  -no-pie"
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-int
-main ()
-{
-
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-  ax_cv_check_cflags___no_pie=yes
-else
-  ax_cv_check_cflags___no_pie=no
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-  CFLAGS=$ax_check_save_flags
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_cflags___no_pie" >&5
-$as_echo "$ax_cv_check_cflags___no_pie" >&6; }
-if test "x$ax_cv_check_cflags___no_pie" = xyes; then :
-  LDFLAGS="-no-pie $LDFLAGS"
-    NOPIE="-no-pie"
-else
-  NOPIE=""
-
-fi
-
-
-
 case "$host_os" in
 	freebsd* )
 		CFLAGS="-I/usr/local/include $CFLAGS"
@@ -5264,6 +5223,7 @@ case "$host_os" in
 		report_have_pthreads="yes, Windows Threads"
   		;;
 	*)
+
 
 
 ac_ext=c
@@ -8452,6 +8412,54 @@ fi
 
 done
 
+for ac_header in sys/select.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "sys/select.h" "ac_cv_header_sys_select_h" "$ac_includes_default"
+if test "x$ac_cv_header_sys_select_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_SYS_SELECT_H 1
+_ACEOF
+
+fi
+
+done
+
+for ac_header in sys/sysinfo.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "sys/sysinfo.h" "ac_cv_header_sys_sysinfo_h" "$ac_includes_default"
+if test "x$ac_cv_header_sys_sysinfo_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_SYS_SYSINFO_H 1
+_ACEOF
+
+fi
+
+done
+
+for ac_header in sys/sysctl.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "sys/sysctl.h" "ac_cv_header_sys_sysctl_h" "$ac_includes_default"
+if test "x$ac_cv_header_sys_sysctl_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_SYS_SYSCTL_H 1
+_ACEOF
+
+fi
+
+done
+
+for ac_header in sys/resource.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "sys/resource.h" "ac_cv_header_sys_resource_h" "$ac_includes_default"
+if test "x$ac_cv_header_sys_resource_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_SYS_RESOURCE_H 1
+_ACEOF
+
+fi
+
+done
+
 for ac_header in netinet/in.h
 do :
   ac_fn_c_check_header_mongrel "$LINENO" "netinet/in.h" "ac_cv_header_netinet_in_h" "$ac_includes_default"
@@ -8476,12 +8484,12 @@ fi
 
 done
 
-for ac_header in resolv.h
+for ac_header in arpa/inet.h
 do :
-  ac_fn_c_check_header_mongrel "$LINENO" "resolv.h" "ac_cv_header_resolv_h" "$ac_includes_default"
-if test "x$ac_cv_header_resolv_h" = xyes; then :
+  ac_fn_c_check_header_mongrel "$LINENO" "arpa/inet.h" "ac_cv_header_arpa_inet_h" "$ac_includes_default"
+if test "x$ac_cv_header_arpa_inet_h" = xyes; then :
   cat >>confdefs.h <<_ACEOF
-#define HAVE_RESOLV_H 1
+#define HAVE_ARPA_INET_H 1
 _ACEOF
 
 fi
@@ -8679,6 +8687,30 @@ _ACEOF
 fi
 
 done
+
+for ac_header in resolv.h
+do :
+  ac_fn_c_check_header_compile "$LINENO" "resolv.h" "ac_cv_header_resolv_h" "
+#ifdef HAVE_SYS_TYPES_H
+	#include <sys/types.h>
+#endif
+#ifdef HAVE_NETINET_IN_H
+	#include <netinet/in.h>
+#endif
+#ifdef HAVE_ARPA_NAMESER_H
+	#include <arpa/nameser.h>
+#endif
+
+"
+if test "x$ac_cv_header_resolv_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_RESOLV_H 1
+_ACEOF
+
+fi
+
+done
+
 
 
 
@@ -10746,7 +10778,7 @@ fi
 fi
 
 report_have_libbind="no"
-if test "$have_res_query" = "yes"
+if test "$have_res_mkquery" = "yes"
 then
 
 $as_echo "#define HAVE_LIBBIND 1" >>confdefs.h
@@ -11144,8 +11176,6 @@ HAVE_X86_ASSEMBLER=
 
 
 ############################
-
-
 
 
 
@@ -12616,6 +12646,77 @@ if test -n "$ac_unrecognized_opts" && test "$enable_option_checking" != no; then
 $as_echo "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
 
+
+
+###############################################################################
+# Report
+###############################################################################
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result:
+******************************************************************************
+** Configuration summary for $PACKAGE_NAME Version $PACKAGE_VERSION
+** Target: $target_os        CPU: $target_cpu
+**
+** Byteorder: $report_byteorder
+**   Size of char         $ac_cv_sizeof_char     Size of float        $ac_cv_sizeof_float
+**   Size of short        $ac_cv_sizeof_short     Size of double       $ac_cv_sizeof_double
+**   Size of int          $ac_cv_sizeof_int     Size of void*        $ac_cv_sizeof_voidp
+**   Size of long         $ac_cv_sizeof_long     Size of wchar_t      $ac_cv_sizeof_wchar_t
+**   Size of long long    $ac_cv_sizeof_long_long
+**   Size of size_t       $ac_cv_sizeof_size_t
+******************************************************************************
+** Features:
+**   Threads:              $report_have_pthreads
+**   Resolver lib:         $report_have_libbind
+**   PCRE:                 $report_have_pcre
+******************************************************************************
+" >&5
+$as_echo "
+******************************************************************************
+** Configuration summary for $PACKAGE_NAME Version $PACKAGE_VERSION
+** Target: $target_os        CPU: $target_cpu
+**
+** Byteorder: $report_byteorder
+**   Size of char         $ac_cv_sizeof_char     Size of float        $ac_cv_sizeof_float
+**   Size of short        $ac_cv_sizeof_short     Size of double       $ac_cv_sizeof_double
+**   Size of int          $ac_cv_sizeof_int     Size of void*        $ac_cv_sizeof_voidp
+**   Size of long         $ac_cv_sizeof_long     Size of wchar_t      $ac_cv_sizeof_wchar_t
+**   Size of long long    $ac_cv_sizeof_long_long
+**   Size of size_t       $ac_cv_sizeof_size_t
+******************************************************************************
+** Features:
+**   Threads:              $report_have_pthreads
+**   Resolver lib:         $report_have_libbind
+**   PCRE:                 $report_have_pcre
+******************************************************************************
+" >&6; }
+
+missing=""
+
+if test "$report_have_pthreads" = "no"
+then
+	missing="$missing  - no threading available
+"
+fi
+
+if test "$report_have_pcre" != "yes"
+then
+	missing="$missing  - libpcre is required but not found
+"
+fi
+
+
+if test "$report_have_libbind" != "yes"
+then
+	missing="$missing  - libbind or libresolv is required but not found
+"
+fi
+
+if test -n "$missing"
+then
+	as_fn_error $? "Cannot build because of missing dependencies:
+$missing" "$LINENO" 5
+fi
 
 
 

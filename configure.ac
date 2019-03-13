@@ -45,13 +45,6 @@ AC_PROG_CC
 CFLAGS=$OLD_CFLAGS
 AC_PROG_CXX
 
-AX_CHECK_COMPILE_FLAG([-no-pie],
-    LDFLAGS="-no-pie $LDFLAGS"
-    NOPIE="-no-pie",
-    NOPIE=""
-)
-AC_SUBST(NOPIE)
-
 case "$host_os" in
 	freebsd* )
 		CFLAGS="-I/usr/local/include $CFLAGS"
@@ -184,9 +177,13 @@ AC_CHECK_HEADERS([sys/time.h])
 AC_CHECK_HEADERS([sys/types.h])
 AC_CHECK_HEADERS([sys/socket.h])
 AC_CHECK_HEADERS([sys/poll.h])
+AC_CHECK_HEADERS([sys/select.h])
+AC_CHECK_HEADERS([sys/sysinfo.h])
+AC_CHECK_HEADERS([sys/sysctl.h])
+AC_CHECK_HEADERS([sys/resource.h])
 AC_CHECK_HEADERS([netinet/in.h])
 AC_CHECK_HEADERS([arpa/nameser.h])
-AC_CHECK_HEADERS([resolv.h],,,[])
+AC_CHECK_HEADERS([arpa/inet.h])
 AC_CHECK_HEADERS([netdb.h])
 AC_CHECK_HEADERS([arpa/inet.h])
 AC_CHECK_HEADERS([strings.h])
@@ -203,6 +200,19 @@ AC_CHECK_HEADERS([wchar.h])
 AC_CHECK_HEADERS([widec.h])
 AC_CHECK_HEADERS([syslog.h])
 AC_CHECK_HEADERS([sys/mman.h])
+AC_CHECK_HEADERS([resolv.h],[],[],
+[
+#ifdef HAVE_SYS_TYPES_H
+	#include <sys/types.h>
+#endif
+#ifdef HAVE_NETINET_IN_H
+	#include <netinet/in.h>
+#endif
+#ifdef HAVE_ARPA_NAMESER_H
+	#include <arpa/nameser.h>
+#endif
+])
+
 
 
 AC_CHECK_TYPE(size_t, unsigned)
@@ -260,7 +270,7 @@ AC_CHECK_FUNC(sin,,[AC_CHECK_LIB(m,sin)])
 # Resolver
 AM_CHECK_LIBBIND()
 report_have_libbind="no"
-if test "$have_res_query" = "yes"
+if test "$have_res_mkquery" = "yes"
 then
 	AC_DEFINE(HAVE_LIBBIND,1,[ Define if you have libbind resolver functions ])
 	report_have_libbind="yes"
@@ -426,13 +436,65 @@ AC_SUBST(report_have_pcre)
 AC_SUBST(report_have_pthreads)
 AC_SUBST(report_have_libbind)
 
-
-
 ###############################################################################
 # Output
 ###############################################################################
 
 AC_OUTPUT
+
+
+###############################################################################
+# Report
+###############################################################################
+
+dnl report configuration
+AC_MSG_RESULT([
+******************************************************************************
+** Configuration summary for $PACKAGE_NAME Version $PACKAGE_VERSION
+** Target: $target_os        CPU: $target_cpu
+** 
+** Byteorder: $report_byteorder
+**   Size of char         $ac_cv_sizeof_char     Size of float        $ac_cv_sizeof_float
+**   Size of short        $ac_cv_sizeof_short     Size of double       $ac_cv_sizeof_double
+**   Size of int          $ac_cv_sizeof_int     Size of void*        $ac_cv_sizeof_voidp
+**   Size of long         $ac_cv_sizeof_long     Size of wchar_t      $ac_cv_sizeof_wchar_t
+**   Size of long long    $ac_cv_sizeof_long_long     
+**   Size of size_t       $ac_cv_sizeof_size_t
+******************************************************************************
+** Features:
+**   Threads:              $report_have_pthreads
+**   Resolver lib:         $report_have_libbind
+**   PCRE:                 $report_have_pcre
+******************************************************************************
+])
+
+dnl check if we have all required libraries
+missing=""
+
+if test "$report_have_pthreads" = "no"
+then
+	missing="$missing  - no threading available
+"
+fi
+
+if test "$report_have_pcre" != "yes"
+then
+	missing="$missing  - libpcre is required but not found
+"
+fi
+
+
+if test "$report_have_libbind" != "yes"
+then
+	missing="$missing  - libbind or libresolv is required but not found
+"
+fi
+
+if test -n "$missing"
+then
+	AC_MSG_ERROR(Cannot build because of missing dependencies:
+$missing)
+fi
 
 
 
