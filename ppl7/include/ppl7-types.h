@@ -210,7 +210,7 @@ class ByteArrayPtr
 		String toBase64() const;
 		const char* toCharPtr() const;
 		String md5() const;
-		ppluint32 crc32() const;
+		uint32_t crc32() const;
 		unsigned char operator[](size_t pos) const;
 		void set(size_t pos, unsigned char value);
 		unsigned char get(size_t pos) const;
@@ -272,8 +272,6 @@ public:
 };
 std::ostream& operator<<(std::ostream& s, const ByteArray &ba);
 
-ByteArray fromBase64(const String &base64);
-
 class String
 {
 	private:
@@ -290,18 +288,27 @@ class String
 		String(const String &str);
 		String(const WideString *str);
 		String(const WideString &str);
+        String(const ByteArrayPtr &str);
 		String(const std::string &str);
 		String(const std::wstring &str);
 		~String() throw();
 #ifdef WITH_QT
 		String(const QString &q) {
 			ptr=NULL; stringlen=0; s=0;
+#ifdef PPL_QT_STRING_UTF8
+			QByteArray a=q.toUtf8();
+#else
 			QByteArray a=q.toLocal8Bit();
+#endif
 			set((const char*)a);
 		}
 		String(QString *q) {
 			ptr=NULL; stringlen=0; s=0;
+#ifdef PPL_QT_STRING_UTF8
+			QByteArray a=q->toUtf8();
+#else
 			QByteArray a=q->toLocal8Bit();
+#endif
 			set((const char*)a);
 		}
 #endif
@@ -351,6 +358,7 @@ class String
 		String & set(const char *str, size_t size=(size_t)-1);
 		String & set(const String *str, size_t size=(size_t)-1);
 		String & set(const String &str, size_t size=(size_t)-1);
+        String & set(const ByteArrayPtr &str, size_t size=(size_t)-1);
 		String & set(const WideString *str, size_t size=(size_t)-1);
 		String & set(const WideString &str, size_t size=(size_t)-1);
 		String & set(const std::string &str, size_t size=(size_t)-1);
@@ -438,14 +446,14 @@ class String
 		ByteArray toEncoding(const char *encoding) const;
 		ByteArray toUCS4() const;
 		ByteArray toUtf8() const;
-		String &fromUCS4(const ppluint32 *str, size_t size=(size_t)-1);
+		String &fromUCS4(const uint32_t *str, size_t size=(size_t)-1);
 		String &fromUCS4(const ByteArrayPtr &bin);
 		String md5() const;
 
 		int toInt() const;
 		unsigned int toUnsignedInt() const;
-		pplint64 toInt64() const;
-		ppluint64 toUnsignedInt64() const;
+		int64_t toInt64() const;
+		uint64_t toUnsignedInt64() const;
 		WideString toWideString() const;
 		bool toBool() const;
 		long toLong() const;
@@ -509,21 +517,37 @@ class String
 		//! @name Operatoren zur Verwendung der Klasse mit Qt
 		//@{
 		operator const QString() const {
+#ifdef PPL_QT_STRING_UTF8
+			return QString::fromUtf8 (ptr,stringlen);
+#else
 			return QString::fromLocal8Bit (ptr,stringlen);
+#endif
 		}
 
 		operator const QVariant() const {
+#ifdef PPL_QT_STRING_UTF8
+			QVariant v=QString::fromUtf8 (ptr,stringlen);
+#else
 			QVariant v=QString::fromLocal8Bit (ptr,stringlen);
+#endif
 			return v;
 		}
 
 		String& operator=(const QString& q) {
+#ifdef PPL_QT_STRING_UTF8
+			QByteArray a=q.toUtf8();
+#else
 			QByteArray a=q.toLocal8Bit();
+#endif
 			set((const char*)a);
 			return *this;
 		}
 		String& operator=(const QString *q) {
+#ifdef PPL_QT_STRING_UTF8
+			QByteArray a=q->toUtf8();
+#else
 			QByteArray a=q->toLocal8Bit();
+#endif
 			set((const char*)a);
 			return *this;
 		}
@@ -591,12 +615,20 @@ class WideString
 #ifdef WITH_QT
 		WideString(const QString &q) {
 			ptr=NULL; stringlen=0; s=0;
+#ifdef PPL_QT_STRING_UTF8
 			QByteArray a=q.toUtf8();
+#else
+			QByteArray a=q.toLocal8Bit();
+#endif
 			set((const char*)a);
 		}
 		WideString(QString *q) {
 			ptr=NULL; stringlen=0; s=0;
+#ifdef PPL_QT_STRING_UTF8
 			QByteArray a=q->toUtf8();
+#else
+			QByteArray a=q->toLocal8Bit();
+#endif
 			set((const char*)a);
 		}
 #endif
@@ -717,13 +749,13 @@ class WideString
 		String toLocalString() const;
 		ByteArray toEncoding(const char *encoding) const;
 		ByteArray toUCS4() const;
-		WideString &fromUCS4(const ppluint32 *str, size_t size=(size_t)-1);
+		WideString &fromUCS4(const uint32_t *str, size_t size=(size_t)-1);
 		WideString &fromUCS4(const ByteArrayPtr &bin);
 
 		int toInt() const;
 		unsigned int toUnsignedInt() const;
-		pplint64 toInt64() const;
-		ppluint64 toUnsignedInt64() const;
+		int64_t toInt64() const;
+		uint64_t toUnsignedInt64() const;
 		bool toBool() const;
 		long toLong() const;
 		unsigned long toUnsignedLong() const;
@@ -798,12 +830,20 @@ class WideString
 		}
 
 		WideString& operator=(const QString& q) {
+#ifdef PPL_QT_STRING_UTF8
 			QByteArray a=q.toUtf8();
+#else
+			QByteArray a=q.toLocal8Bit();
+#endif
 			set((const char*)a);
 			return *this;
 		}
 		WideString& operator=(const QString *q) {
+#ifdef PPL_QT_STRING_UTF8
 			QByteArray a=q->toUtf8();
+#else
+			QByteArray a=q->toLocal8Bit();
+#endif
 			set((const char*)a);
 			return *this;
 		}
@@ -941,7 +981,7 @@ class AssocArray
 		};
 
 		std::map<ArrayKey, Variant*> Tree;
-		ppluint64		maxint;
+		uint64_t		maxint;
 
 		Variant *findInternal(const ArrayKey &key) const;
 		void createTree(const ArrayKey &key, Variant *var);
@@ -1102,7 +1142,7 @@ AssocArray operator+(const AssocArray &a1, const AssocArray& a2);
 
 //! \brief Eine Struktur zum Erfassen von Uhrzeit und Datum
 typedef struct tagTime {
-	ppluint64	epoch;
+	uint64_t	epoch;
 	int			year;
 	int			month;
 	int			day;
@@ -1117,28 +1157,28 @@ typedef struct tagTime {
 } PPLTIME;
 
 //! \brief Datentyp für Unix-Time
-typedef ppluint64 ppl_time_t;
+typedef uint64_t ppl_time_t;
 
 class DateTime
 {
 	private:
-		ppluint32 us;
-		ppluint16 yy;
-		ppluint8 mm;
-		ppluint8 dd;
-		ppluint8 hh;
-		ppluint8 ii;
-		ppluint8 ss;
+		uint32_t us;
+		uint16_t yy;
+		uint8_t mm;
+		uint8_t dd;
+		uint8_t hh;
+		uint8_t ii;
+		uint8_t ss;
 
 	public:
 		DateTime();
 		DateTime(const String &datetime);
 		DateTime(const DateTime &other);
-		DateTime(ppluint64 t);
+		DateTime(uint64_t t);
 
-		void setTime_t(ppluint64 t);
-		void setEpoch(ppluint64 t);
-		void setLongInt(ppluint64 i);
+		void setTime_t(uint64_t t);
+		void setEpoch(uint64_t t);
+		void setLongInt(uint64_t i);
 		void set(const String &datetime);
 		void set(const DateTime &other);
 		void set(const String &date, const String &time);
@@ -1161,9 +1201,9 @@ class DateTime
 		String getISO8601withUsec() const;
 		String getRFC822Date () const;
 		String strftime(const String &format) const;
-		ppluint64 time_t() const;
-		ppluint64 epoch() const;
-		ppluint64 longInt() const;
+		uint64_t time_t() const;
+		uint64_t epoch() const;
+		uint64_t longInt() const;
 
 		int year() const;
 		int month() const;
@@ -1177,7 +1217,7 @@ class DateTime
 		int weekISO8601() const;
 
 
-		pplint64 diffSeconds(const DateTime &other) const;
+		int64_t diffSeconds(const DateTime &other) const;
 		int compareSeconds(const DateTime &other, int tolerance=0) const;
 
 		DateTime& operator=(const String &datetime);

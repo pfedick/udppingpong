@@ -34,7 +34,7 @@
 
 
 
-#include "prolog.h"
+#include "prolog_ppl7.h"
 
 #ifdef HAVE_STDIO_H
 #include <stdio.h>
@@ -690,12 +690,12 @@ void Dir::resortSize()
 	ppl7::List<DirEntry>::Iterator it;
 	Files.reset(it);
 
-	std::multimap<ppluint64, const DirEntry*> sorter;
+	std::multimap<uint64_t, const DirEntry*> sorter;
 	while (Files.getNext(it)) {
 		const DirEntry &de=it.value();
-		sorter.insert(std::pair<ppluint64,const DirEntry*>(de.Size,&de));
+		sorter.insert(std::pair<uint64_t,const DirEntry*>(de.Size,&de));
 	}
-	std::multimap<ppluint64, const DirEntry*>::const_iterator sortit;
+	std::multimap<uint64_t, const DirEntry*>::const_iterator sortit;
 	for (sortit=sorter.begin();sortit!=sorter.end();++sortit) {
 		SortedFiles.add((*sortit).second);
 	}

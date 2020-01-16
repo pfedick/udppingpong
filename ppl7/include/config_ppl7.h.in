@@ -53,6 +53,16 @@
 #undef HAVE_MKTIME
 #undef size_t
 #undef wchar_t
+#undef int8_t
+#undef int16_t
+#undef int32_t
+#undef int64_t
+#undef uint8_t
+#undef uint16_t
+#undef uint32_t
+#undef uint64_t
+#undef uintptr_t
+
 
 #undef HAVE_ALARM
 #undef HAVE_BZERO
@@ -268,38 +278,24 @@
 #undef HAVE_SSLV23_METHOD
 #undef HAVE_SSLV23_SERVER_METHOD
 #undef HAVE_SSLV23_CLIENT_METHOD
+#undef HAVE_EVP_AES_128_ECB
+#undef HAVE_EVP_AES_192_ECB
+#undef HAVE_EVP_AES_256_ECB
+#undef HAVE_EVP_ARIA_128_ECB
+#undef HAVE_EVP_ARIA_192_ECB
+#undef HAVE_EVP_ARIA_256_ECB
+#undef HAVE_EVP_BF_ECB
+#undef HAVE_EVP_CAMELLIA_128_ECB
+#undef HAVE_EVP_CAMELLIA_192_ECB
+#undef HAVE_EVP_CAMELLIA_256_ECB
+#undef HAVE_EVP_CAST5_ECB
+#undef HAVE_EVP_DES_ECB
+#undef HAVE_EVP_DES_EDE3_ECB
+#undef HAVE_EVP_IDEA_ECB
+#undef HAVE_EVP_RC2_ECB
+#undef HAVE_EVP_RC5_32_12_16_ECB
 
-#undef HAVE_LIBMCRYPT
-#undef HAVE_GCRYPT
-#undef GCRYPT_WITH_AES
-#undef GCRYPT_WITH_ARCFOUR
-#undef GCRYPT_WITH_BLOWFISH
-#undef GCRYPT_WITH_CAST5
-#undef GCRYPT_WITH_DES
-#undef GCRYPT_WITH_IDEA
-#undef GCRYPT_WITH_RFC2268
-#undef GCRYPT_WITH_SERPENT
-#undef GCRYPT_WITH_TWOFISH
-#undef GCRYPT_WITH_CRC
-#undef GCRYPT_WITH_HAVAL
-#undef GCRYPT_WITH_MD2
-#undef GCRYPT_WITH_MD4
-#undef GCRYPT_WITH_MD5
-#undef GCRYPT_WITH_RMD160
-#undef GCRYPT_WITH_SHA0
-#undef GCRYPT_WITH_SHA1
-#undef GCRYPT_WITH_SHA224
-#undef GCRYPT_WITH_SHA256
-#undef GCRYPT_WITH_SHA384
-#undef GCRYPT_WITH_SHA512
-#undef GCRYPT_WITH_TIGER
-#undef GCRYPT_WITH_WHIRLPOOL
-#undef GCRYPT_WITH_DSA
-#undef GCRYPT_WITH_ELGAMAL
-#undef GCRYPT_WITH_RSA
-#undef LIBMCRYPT24
 
- 
  
  
 /*
@@ -403,27 +399,8 @@
 #undef HAVE_MYSQL
 #undef HAVE_POSTGRESQL
 #undef POSTGRESQL_HAVE_PQsetSingleRowMode
-#undef HAVE_FREETDS
-#undef HAVE_SYBASE
 #undef HAVE_SQLITE3
 
-
-#define ppluint8	undefined
-#define pplint8		undefined
-#define ppluint16	undefined
-#define pplint16	undefined
-#define ppluint32	undefined
-#define pplint32	undefined
-#define ppluint64	undefined
-#define pplint64	undefined
-
-#define ppliptr		undefined
-
-#define pplfloat	float
-#define ppldouble	double
-#define pplbool		bool
-#define pplchar		char
-#define ppluchar	unsigned char
 
 #define ICONV_UNICODE	undefined
 
@@ -439,7 +416,7 @@
 	#endif
 
 	#define WIN32_LEAN_AND_MEAN		// Keine MFCs
-	#define _WIN32_WINNT 0x501
+	#define _WIN32_WINNT 0x0600
 	// Ab Visual Studio 2005 (Visual C++ 8.0) gibt es einige �nderungen
 	#if _MSC_VER >= 1400
 		#define _CRT_SECURE_NO_WARNINGS

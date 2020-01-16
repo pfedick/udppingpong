@@ -32,7 +32,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  *******************************************************************************/
 
-#include "prolog.h"
+#include "prolog_ppl7.h"
 #ifndef _ISOC99_SOURCE
 #define _ISOC99_SOURCE
 #endif
@@ -207,6 +207,14 @@ String::String(const String &str)
 	stringlen=0;
 	s=0;
 	set(str);
+}
+
+String::String(const ByteArrayPtr &str)
+{
+    ptr=empty_string;
+    stringlen=0;
+    s=0;
+    set(str);
 }
 
 /*!\brief Konstruktor aus Standard-Template String
@@ -430,6 +438,7 @@ bool String::isNumeric() const
 			}
 		}
 	}
+	if(ptr[stringlen-1]=='.') return false;
 	return(true);
 }
 
@@ -673,6 +682,15 @@ String & String::set(const String &str, size_t size)
 	else inbytes=str.stringlen;
 	if (inbytes>str.stringlen) inbytes=str.stringlen;
 	return set(str.ptr,inbytes);
+}
+
+String & String::set(const ByteArrayPtr &str, size_t size)
+{
+    size_t inbytes;
+    if (size!=(size_t)-1) inbytes=size;
+    else inbytes=str.size();
+    if (inbytes>str.size()) inbytes=str.size();
+    return set((const char*)str.adr(),inbytes);
 }
 
 String & String::set(const WideString *str, size_t size)
@@ -1400,16 +1418,16 @@ ByteArray String::toUCS4() const
 {
 	ByteArray ret;
 	if (stringlen) {
-		ppluint32 *ucs4=(ppluint32*)malloc(stringlen*4+4);
+		uint32_t *ucs4=(uint32_t*)malloc(stringlen*4+4);
 		if (!ucs4) throw OutOfMemoryException();
-		for (size_t i=0;i<stringlen;i++) ucs4[i]=(ppluint32)ptr[i];
+		for (size_t i=0;i<stringlen;i++) ucs4[i]=(uint32_t)ptr[i];
 		ucs4[stringlen]=0;
 		ret.useadr(ucs4,stringlen*4);
 	}
 	return ret;
 }
 
-String &String::fromUCS4(const ppluint32 *str, size_t size)
+String &String::fromUCS4(const uint32_t *str, size_t size)
 {
 	clear();
 	/*TODO: Muss noch implementiert werden
@@ -1428,7 +1446,7 @@ String &String::fromUCS4(const ppluint32 *str, size_t size)
 
 String &String::fromUCS4(const ByteArrayPtr &bin)
 {
-	return fromUCS4((ppluint32*)bin.ptr(),bin.size());
+	return fromUCS4((uint32_t*)bin.ptr(),bin.size());
 }
 
 
@@ -3224,27 +3242,27 @@ unsigned int String::toUnsignedInt() const
 	return strtoul(ptr,NULL,10);
 }
 
-pplint64 String::toInt64() const
+int64_t String::toInt64() const
 {
 	if (!stringlen) return 0;
 #ifdef HAVE_STRTOLL
-	return (pplint64) strtoll(ptr,NULL,10);
+	return (int64_t) strtoll(ptr,NULL,10);
 #elif defined WIN32
-	return (pplint64) _strtoi64(ptr,NULL,10);
+	return (int64_t) _strtoi64(ptr,NULL,10);
 #else
 	throw TypeConversionException();
 #endif
 }
 
-ppluint64 String::toUnsignedInt64() const
+uint64_t String::toUnsignedInt64() const
 {
 	if (!stringlen) return 0;
 #ifdef HAVE_STRTOULL
-	return (ppluint64) strtoull(ptr,NULL,10);
+	return (uint64_t) strtoull(ptr,NULL,10);
 #elif defined HAVE_STRTOLL
-	return (ppluint64) strtoll(ptr,NULL,10);
+	return (uint64_t) strtoll(ptr,NULL,10);
 #elif defined WIN32
-	return (ppluint64) _strtoi64(ptr,NULL,10);
+	return (uint64_t) _strtoi64(ptr,NULL,10);
 #else
 	throw TypeConversionException();
 #endif

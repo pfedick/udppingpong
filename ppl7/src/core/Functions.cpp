@@ -33,7 +33,7 @@
  *******************************************************************************/
 
 
-#include "prolog.h"
+#include "prolog_ppl7.h"
 #ifdef HAVE_WIDEC_H
 #include <widec.h>
 #endif
@@ -194,9 +194,9 @@ void HexDump(const void *address, size_t bytes, bool skipheader)
     buff[0]=0;
     memset(cleartext,0,20);
     for (size_t i=0;i<bytes;i++) {
-        sprintf (tmp,"%02X ",(ppluint8)_adresse[i]);
+        sprintf (tmp,"%02X ",(uint8_t)_adresse[i]);
         strcat (buff,tmp);
-        if ((ppluint8)_adresse[i]>31 && (ppluint8)_adresse[i]<128)  cleartext[spalte]=(ppluint8)_adresse[i];
+        if ((uint8_t)_adresse[i]>31 && (uint8_t)_adresse[i]<128)  cleartext[spalte]=(uint8_t)_adresse[i];
         else cleartext[spalte]='.';
         spalte++;
         if (spalte>15) {
@@ -271,9 +271,9 @@ void HexDump(const void *address, size_t bytes)
  * @param Wert Wert, der gespeichert werden soll
  * @see Beschreibung von \ref PPLGroupPeekPoke
  */
-void Poke8 (void *Adresse, ppluint32 Wert)
+void Poke8 (void *Adresse, uint8_t Wert)
 {
-	((ppluint8*)Adresse)[0]=(ppluint8)(Wert & 255);
+	((uint8_t*)Adresse)[0]=Wert;
 }
 
 /*!\brief 16-Bit-Wert schreiben
@@ -288,13 +288,13 @@ void Poke8 (void *Adresse, ppluint32 Wert)
  * @param Wert Wert, der gespeichert werden soll
  * @see Beschreibung von \ref PPLGroupPeekPoke
  */
-void Poke16 (void *Adresse, ppluint32 Wert)
+void Poke16 (void *Adresse, uint16_t Wert)
 {
 	#ifdef __BIG_ENDIAN__
-		((ppluint8*)Adresse)[0]=(ppluint8)(Wert & 255);
-		((ppluint8*)Adresse)[1]=(ppluint8)((Wert >>8)&255);
+		((uint8_t*)Adresse)[0]=(uint8_t)(Wert & 255);
+		((uint8_t*)Adresse)[1]=(uint8_t)((Wert >>8)&255);
 	#else
-		((ppluint16*)Adresse)[0]=(ppluint16)(Wert & 0xffff);
+		((uint16_t*)Adresse)[0]=Wert;
 	#endif
 
 }
@@ -311,11 +311,11 @@ void Poke16 (void *Adresse, ppluint32 Wert)
  * @param Wert Wert, der gespeichert werden soll
  * @see Beschreibung von \ref PPLGroupPeekPoke
  */
-void Poke24 (void *Adresse, ppluint32 Wert)
+void Poke24 (void *Adresse, uint32_t Wert)
 {
-	((ppluint8*)Adresse)[0]=(ppluint8)(Wert & 255);
-	((ppluint8*)Adresse)[1]=(ppluint8)((Wert >>8)&255);
-	((ppluint8*)Adresse)[2]=(ppluint8)((Wert >>16)&255);
+	((uint8_t*)Adresse)[0]=(uint8_t)(Wert & 255);
+	((uint8_t*)Adresse)[1]=(uint8_t)((Wert >>8)&255);
+	((uint8_t*)Adresse)[2]=(uint8_t)((Wert >>16)&255);
 }
 
 /*!\brief 32-Bit-Wert schreiben
@@ -330,15 +330,15 @@ void Poke24 (void *Adresse, ppluint32 Wert)
  * @param Wert Wert, der gespeichert werden soll
  * @see Beschreibung von \ref PPLGroupPeekPoke
  */
-void Poke32 (void *Adresse, ppluint32 Wert)
+void Poke32 (void *Adresse, uint32_t Wert)
 {
 	#ifdef __BIG_ENDIAN__
-		((ppluint8*)Adresse)[0]=(ppluint8)(Wert & 255);
-		((ppluint8*)Adresse)[1]=(ppluint8)((Wert >>8)&255);
-		((ppluint8*)Adresse)[2]=(ppluint8)((Wert >>16)&255);
-		((ppluint8*)Adresse)[3]=(ppluint8)((Wert >>24)&255);
+		((uint8_t*)Adresse)[0]=(uint8_t)(Wert & 255);
+		((uint8_t*)Adresse)[1]=(uint8_t)((Wert >>8)&255);
+		((uint8_t*)Adresse)[2]=(uint8_t)((Wert >>16)&255);
+		((uint8_t*)Adresse)[3]=(uint8_t)((Wert >>24)&255);
 	#else
-		((ppluint32*)Adresse)[0]=Wert;
+		((uint32_t*)Adresse)[0]=Wert;
 	#endif
 }
 
@@ -354,19 +354,19 @@ void Poke32 (void *Adresse, ppluint32 Wert)
  * @param Wert Wert, der gespeichert werden soll
  * @see Beschreibung von \ref PPLGroupPeekPoke
  */
-void Poke64 (void *Adresse, ppluint64 Wert)
+void Poke64 (void *Adresse, uint64_t Wert)
 {
 	#ifdef __BIG_ENDIAN__
-		((ppluint8*)Adresse)[0]=(ppluint8)(Wert & 255);
-		((ppluint8*)Adresse)[1]=(ppluint8)((Wert >>8)&255);
-		((ppluint8*)Adresse)[2]=(ppluint8)((Wert >>16)&255);
-		((ppluint8*)Adresse)[3]=(ppluint8)((Wert >>24)&255);
-		((ppluint8*)Adresse)[4]=(ppluint8)((Wert >>32)&255);
-		((ppluint8*)Adresse)[5]=(ppluint8)((Wert >>40)&255);
-		((ppluint8*)Adresse)[6]=(ppluint8)((Wert >>48)&255);
-		((ppluint8*)Adresse)[7]=(ppluint8)((Wert >>56)&255);
+		((uint8_t*)Adresse)[0]=(uint8_t)(Wert & 255);
+		((uint8_t*)Adresse)[1]=(uint8_t)((Wert >>8)&255);
+		((uint8_t*)Adresse)[2]=(uint8_t)((Wert >>16)&255);
+		((uint8_t*)Adresse)[3]=(uint8_t)((Wert >>24)&255);
+		((uint8_t*)Adresse)[4]=(uint8_t)((Wert >>32)&255);
+		((uint8_t*)Adresse)[5]=(uint8_t)((Wert >>40)&255);
+		((uint8_t*)Adresse)[6]=(uint8_t)((Wert >>48)&255);
+		((uint8_t*)Adresse)[7]=(uint8_t)((Wert >>56)&255);
 	#else
-		((ppluint64*)Adresse)[0]=Wert;
+		((uint64_t*)Adresse)[0]=Wert;
 	#endif
 }
 
@@ -402,9 +402,9 @@ void PokeFloat(void *Adresse, float Wert)
  * @return Ausgelesener Wert
  * @see Beschreibung von \ref PPLGroupPeekPoke
  */
-ppluint32 Peek8 (const void *Adresse)
+uint8_t Peek8 (const void *Adresse)
 {
-	return (ppluint32)((ppluint8*)Adresse)[0];
+	return (uint32_t)((uint8_t*)Adresse)[0];
 }
 
 /*!\brief 16-Bit-Wert auslesen
@@ -418,15 +418,15 @@ ppluint32 Peek8 (const void *Adresse)
  * @return Ausgelesener Wert
  * @see Beschreibung von \ref PPLGroupPeekPoke
  */
-ppluint32 Peek16 (const void * Adresse)
+uint16_t Peek16 (const void * Adresse)
 {
 	#ifdef __BIG_ENDIAN__
-		ppluint8 wert1,wert2;
-		wert1=((ppluint8*)Adresse)[0];
-		wert2=((ppluint8*)Adresse)[1];
-		return((ppluint32) (ppluint32)wert1+((ppluint32)wert2<<8));
+		uint8_t wert1,wert2;
+		wert1=((uint8_t*)Adresse)[0];
+		wert2=((uint8_t*)Adresse)[1];
+		return((uint32_t) (uint32_t)wert1+((uint32_t)wert2<<8));
 	#else
-		return (ppluint32) ((ppluint16*)Adresse)[0];
+		return (uint16_t) ((uint16_t*)Adresse)[0];
 	#endif
 }
 
@@ -441,13 +441,13 @@ ppluint32 Peek16 (const void * Adresse)
  * @return Ausgelesener Wert
  * @see Beschreibung von \ref PPLGroupPeekPoke
  */
-ppluint32 Peek24 (const void *Adresse)
+uint32_t Peek24 (const void *Adresse)
 {
-	ppluint8 wert1,wert2,wert3;
-	wert1=((ppluint8*)Adresse)[0];
-	wert2=((ppluint8*)Adresse)[1];
-	wert3=((ppluint8*)Adresse)[2];
-	return((ppluint32) wert1+(wert2<<8)+(wert3<<16));
+	uint8_t wert1,wert2,wert3;
+	wert1=((uint8_t*)Adresse)[0];
+	wert2=((uint8_t*)Adresse)[1];
+	wert3=((uint8_t*)Adresse)[2];
+	return((uint32_t) wert1+(wert2<<8)+(wert3<<16));
 }
 
 /*!\brief 32-Bit-Wert auslesen
@@ -461,18 +461,18 @@ ppluint32 Peek24 (const void *Adresse)
  * @return Ausgelesener Wert
  * @see Beschreibung von \ref PPLGroupPeekPoke
  */
-ppluint32 Peek32 (const void *Adresse)
+uint32_t Peek32 (const void *Adresse)
 {
 	#ifdef __BIG_ENDIAN__
-		ppluint8 wert1,wert2,wert3,wert4;
-		wert1=((ppluint8*)Adresse)[0];
-		wert2=((ppluint8*)Adresse)[1];
-		wert3=((ppluint8*)Adresse)[2];
-		wert4=((ppluint8*)Adresse)[3];
+		uint8_t wert1,wert2,wert3,wert4;
+		wert1=((uint8_t*)Adresse)[0];
+		wert2=((uint8_t*)Adresse)[1];
+		wert3=((uint8_t*)Adresse)[2];
+		wert4=((uint8_t*)Adresse)[3];
 
-		return((ppluint32) (ppluint32)wert1+((ppluint32)wert2<<8)+((ppluint32)wert3<<16)+((ppluint32)wert4<<24));
+		return((uint32_t) (uint32_t)wert1+((uint32_t)wert2<<8)+((uint32_t)wert3<<16)+((uint32_t)wert4<<24));
 	#else
-		return (ppluint32) ((ppluint32*)Adresse)[0];
+		return (uint32_t) ((uint32_t*)Adresse)[0];
 	#endif
 }
 
@@ -487,22 +487,22 @@ ppluint32 Peek32 (const void *Adresse)
  * @return Ausgelesener Wert
  * @see Beschreibung von \ref PPLGroupPeekPoke
  */
-ppluint64 Peek64 (const void *Adresse)
+uint64_t Peek64 (const void *Adresse)
 {
 	#ifdef __BIG_ENDIAN__
-		ppluint8 wert1,wert2,wert3,wert4,wert5,wert6,wert7,wert8;
-		wert1=((ppluint8*)Adresse)[0];
-		wert2=((ppluint8*)Adresse)[1];
-		wert3=((ppluint8*)Adresse)[2];
-		wert4=((ppluint8*)Adresse)[3];
-		wert5=((ppluint8*)Adresse)[4];
-		wert6=((ppluint8*)Adresse)[5];
-		wert7=((ppluint8*)Adresse)[6];
-		wert8=((ppluint8*)Adresse)[7];
+		uint8_t wert1,wert2,wert3,wert4,wert5,wert6,wert7,wert8;
+		wert1=((uint8_t*)Adresse)[0];
+		wert2=((uint8_t*)Adresse)[1];
+		wert3=((uint8_t*)Adresse)[2];
+		wert4=((uint8_t*)Adresse)[3];
+		wert5=((uint8_t*)Adresse)[4];
+		wert6=((uint8_t*)Adresse)[5];
+		wert7=((uint8_t*)Adresse)[6];
+		wert8=((uint8_t*)Adresse)[7];
 
-		return((ppluint64) (ppluint64)wert1+((ppluint64)wert2<<8)+((ppluint64)wert3<<16)+((ppluint64)wert4<<24)+((ppluint64)wert5<<32)+((ppluint64)wert6<<40)+((ppluint64)wert7<<48)+((ppluint64)wert8<<56));
+		return((uint64_t) (uint64_t)wert1+((uint64_t)wert2<<8)+((uint64_t)wert3<<16)+((uint64_t)wert4<<24)+((uint64_t)wert5<<32)+((uint64_t)wert6<<40)+((uint64_t)wert7<<48)+((uint64_t)wert8<<56));
 	#else
-		return (ppluint64) ((ppluint64*)Adresse)[0];
+		return (uint64_t) ((uint64_t*)Adresse)[0];
 	#endif
 }
 
@@ -538,9 +538,9 @@ float PeekFloat(const void *Adresse)
  * @param Wert Wert, der gespeichert werden soll
  * @see Beschreibung von \ref PPLGroupPeekPoke
  */
-void PokeN8 (void *Adresse, ppluint32 Wert)
+void PokeN8 (void *Adresse, uint8_t Wert)
 {
-	((ppluint8*)Adresse)[0]=(ppluint8)(Wert & 255);
+	((uint8_t*)Adresse)[0]=(uint8_t)(Wert & 255);
 }
 
 /*!\brief 16-Bit-Wert in Network-Byteorder schreiben
@@ -555,16 +555,16 @@ void PokeN8 (void *Adresse, ppluint32 Wert)
  * @param Wert Wert, der gespeichert werden soll
  * @see Beschreibung von \ref PPLGroupPeekPoke
  */
-void PokeN16 (void *Adresse, ppluint32 Wert)
+void PokeN16 (void *Adresse, uint16_t Wert)
 {
 	#ifdef __BIG_ENDIAN__
 		// Direktes schreiben löst bei unalignten Adressen unter Solaris einen Bus-Error aus
-		//((ppluint16*)Adresse)[0]=(ppluint16)(Wert & 0xffff);
-		((ppluint8*)Adresse)[1]=(ppluint8)(Wert & 255);
-		((ppluint8*)Adresse)[0]=(ppluint8)((Wert >> 8)&255);
+		//((uint16_t*)Adresse)[0]=(uint16_t)(Wert & 0xffff);
+		((uint8_t*)Adresse)[1]=(uint8_t)(Wert & 255);
+		((uint8_t*)Adresse)[0]=(uint8_t)((Wert >> 8)&255);
 	#else
-		((ppluint8*)Adresse)[1]=(ppluint8)(Wert & 255);
-		((ppluint8*)Adresse)[0]=(ppluint8)((Wert >> 8)&255);
+		((uint8_t*)Adresse)[1]=(uint8_t)(Wert & 255);
+		((uint8_t*)Adresse)[0]=(uint8_t)((Wert >> 8)&255);
 	#endif
 
 }
@@ -581,32 +581,18 @@ void PokeN16 (void *Adresse, ppluint32 Wert)
  * @param Wert Wert, der gespeichert werden soll
  * @see Beschreibung von \ref PPLGroupPeekPoke
  */
-void PokeN32 (void *Adresse, ppluint32 Wert)
+void PokeN32 (void *Adresse, uint32_t Wert)
 {
 	#ifdef __BIG_ENDIAN__
-		// Direktes schreiben löst bei unalignten Adressen unter Solaris einen Bus-Error aus
-		//((ppluint32*)Adresse)[0]=Wert;
-		((ppluint8*)Adresse)[3]=(ppluint8)(Wert & 255);
-		((ppluint8*)Adresse)[2]=(ppluint8)((Wert >> 8)&255);
-		((ppluint8*)Adresse)[1]=(ppluint8)((Wert >> 16)&255);
-		((ppluint8*)Adresse)[0]=(ppluint8)((Wert >> 24)&255);
+		((uint8_t*)Adresse)[3]=(uint8_t)(Wert & 255);
+		((uint8_t*)Adresse)[2]=(uint8_t)((Wert >> 8)&255);
+		((uint8_t*)Adresse)[1]=(uint8_t)((Wert >> 16)&255);
+		((uint8_t*)Adresse)[0]=(uint8_t)((Wert >> 24)&255);
 	#else
-		/*
-#ifdef HAVE_X86_ASSEMBLER
-#if __GNUC__ > 3
-		asm(".intel_syntax noprefix\n"
-			"bswap eax\n"
-			": : \"eax\"(Wert) :"
-			".att_syntax prefix\n"
-
-				);
-#endif
-#endif
-*/
-		((ppluint8*)Adresse)[3]=(ppluint8)(Wert & 255);
-		((ppluint8*)Adresse)[2]=(ppluint8)((Wert >> 8)&255);
-		((ppluint8*)Adresse)[1]=(ppluint8)((Wert >> 16)&255);
-		((ppluint8*)Adresse)[0]=(ppluint8)((Wert >> 24)&255);
+		((uint8_t*)Adresse)[3]=(uint8_t)(Wert & 255);
+		((uint8_t*)Adresse)[2]=(uint8_t)((Wert >> 8)&255);
+		((uint8_t*)Adresse)[1]=(uint8_t)((Wert >> 16)&255);
+		((uint8_t*)Adresse)[0]=(uint8_t)((Wert >> 24)&255);
 	#endif
 
 }
@@ -623,28 +609,28 @@ void PokeN32 (void *Adresse, ppluint32 Wert)
  * @param Wert Wert, der gespeichert werden soll
  * @see Beschreibung von \ref PPLGroupPeekPoke
  */
-void PokeN64 (void *Adresse, ppluint64 Wert)
+void PokeN64 (void *Adresse, uint64_t Wert)
 {
 	#ifdef __BIG_ENDIAN__
 		// Direktes schreiben löst bei unalignten Adressen unter Solaris einen Bus-Error aus
-		//((ppluint64*)Adresse)[0]=Wert;
-		((ppluint8*)Adresse)[7]=(ppluint8)(Wert & 255);
-		((ppluint8*)Adresse)[6]=(ppluint8)((Wert >>8)&255);
-		((ppluint8*)Adresse)[5]=(ppluint8)((Wert >>16)&255);
-		((ppluint8*)Adresse)[4]=(ppluint8)((Wert >>24)&255);
-		((ppluint8*)Adresse)[3]=(ppluint8)((Wert >>32)&255);
-		((ppluint8*)Adresse)[2]=(ppluint8)((Wert >>40)&255);
-		((ppluint8*)Adresse)[1]=(ppluint8)((Wert >>48)&255);
-		((ppluint8*)Adresse)[0]=(ppluint8)((Wert >>56)&255);
+		//((uint64_t*)Adresse)[0]=Wert;
+		((uint8_t*)Adresse)[7]=(uint8_t)(Wert & 255);
+		((uint8_t*)Adresse)[6]=(uint8_t)((Wert >>8)&255);
+		((uint8_t*)Adresse)[5]=(uint8_t)((Wert >>16)&255);
+		((uint8_t*)Adresse)[4]=(uint8_t)((Wert >>24)&255);
+		((uint8_t*)Adresse)[3]=(uint8_t)((Wert >>32)&255);
+		((uint8_t*)Adresse)[2]=(uint8_t)((Wert >>40)&255);
+		((uint8_t*)Adresse)[1]=(uint8_t)((Wert >>48)&255);
+		((uint8_t*)Adresse)[0]=(uint8_t)((Wert >>56)&255);
 	#else
-		((ppluint8*)Adresse)[7]=(ppluint8)(Wert & 255);
-		((ppluint8*)Adresse)[6]=(ppluint8)((Wert >>8)&255);
-		((ppluint8*)Adresse)[5]=(ppluint8)((Wert >>16)&255);
-		((ppluint8*)Adresse)[4]=(ppluint8)((Wert >>24)&255);
-		((ppluint8*)Adresse)[3]=(ppluint8)((Wert >>32)&255);
-		((ppluint8*)Adresse)[2]=(ppluint8)((Wert >>40)&255);
-		((ppluint8*)Adresse)[1]=(ppluint8)((Wert >>48)&255);
-		((ppluint8*)Adresse)[0]=(ppluint8)((Wert >>56)&255);
+		((uint8_t*)Adresse)[7]=(uint8_t)(Wert & 255);
+		((uint8_t*)Adresse)[6]=(uint8_t)((Wert >>8)&255);
+		((uint8_t*)Adresse)[5]=(uint8_t)((Wert >>16)&255);
+		((uint8_t*)Adresse)[4]=(uint8_t)((Wert >>24)&255);
+		((uint8_t*)Adresse)[3]=(uint8_t)((Wert >>32)&255);
+		((uint8_t*)Adresse)[2]=(uint8_t)((Wert >>40)&255);
+		((uint8_t*)Adresse)[1]=(uint8_t)((Wert >>48)&255);
+		((uint8_t*)Adresse)[0]=(uint8_t)((Wert >>56)&255);
 	#endif
 }
 
@@ -659,9 +645,9 @@ void PokeN64 (void *Adresse, ppluint64 Wert)
  * @return Ausgelesener Wert
  * @see Beschreibung von \ref PPLGroupPeekPoke
  */
-ppluint32 PeekN8 (const void *Adresse)
+uint8_t PeekN8 (const void *Adresse)
 {
-	return (ppluint32)((ppluint8*)Adresse)[0];
+	return (uint8_t)((uint8_t*)Adresse)[0];
 }
 
 /*!\brief 16-Bit-Wert in Network-Byteorder auslesen
@@ -675,19 +661,19 @@ ppluint32 PeekN8 (const void *Adresse)
  * @return Ausgelesener Wert
  * @see Beschreibung von \ref PPLGroupPeekPoke
  */
-ppluint32 PeekN16 (const void * Adresse)
+uint16_t PeekN16 (const void * Adresse)
 {
 	#ifdef __BIG_ENDIAN__
-		ppluint8 wert1,wert2;
-		wert1=((ppluint8*)Adresse)[1];
-		wert2=((ppluint8*)Adresse)[0];
-		return((ppluint32) (ppluint32)wert1+((ppluint32)wert2<<8));
+		uint8_t wert1,wert2;
+		wert1=((uint8_t*)Adresse)[1];
+		wert2=((uint8_t*)Adresse)[0];
+		return((uint32_t) (uint32_t)wert1+((uint32_t)wert2<<8));
 
 	#else
-		ppluint8 wert1,wert2;
-		wert1=((ppluint8*)Adresse)[1];
-		wert2=((ppluint8*)Adresse)[0];
-		return((ppluint32) (ppluint32)wert1+((ppluint32)wert2<<8));
+		uint8_t wert1,wert2;
+		wert1=((uint8_t*)Adresse)[1];
+		wert2=((uint8_t*)Adresse)[0];
+		return((uint16_t) (uint16_t)wert1+((uint16_t)wert2<<8));
 	#endif
 }
 
@@ -702,23 +688,23 @@ ppluint32 PeekN16 (const void * Adresse)
  * @return Ausgelesener Wert
  * @see Beschreibung von \ref PPLGroupPeekPoke
  */
-ppluint32 PeekN32 (const void *Adresse)
+uint32_t PeekN32 (const void *Adresse)
 {
 	#ifdef __BIG_ENDIAN__
-		ppluint8 wert1,wert2,wert3,wert4;
-		wert1=((ppluint8*)Adresse)[3];
-		wert2=((ppluint8*)Adresse)[2];
-		wert3=((ppluint8*)Adresse)[1];
-		wert4=((ppluint8*)Adresse)[0];
-		return((ppluint32) (ppluint32)wert1+((ppluint32)wert2<<8)+((ppluint32)wert3<<16)+((ppluint32)wert4<<24));
+		uint8_t wert1,wert2,wert3,wert4;
+		wert1=((uint8_t*)Adresse)[3];
+		wert2=((uint8_t*)Adresse)[2];
+		wert3=((uint8_t*)Adresse)[1];
+		wert4=((uint8_t*)Adresse)[0];
+		return((uint32_t) (uint32_t)wert1+((uint32_t)wert2<<8)+((uint32_t)wert3<<16)+((uint32_t)wert4<<24));
 
 	#else
-		ppluint8 wert1,wert2,wert3,wert4;
-		wert1=((ppluint8*)Adresse)[3];
-		wert2=((ppluint8*)Adresse)[2];
-		wert3=((ppluint8*)Adresse)[1];
-		wert4=((ppluint8*)Adresse)[0];
- 		return((ppluint32) (ppluint32)wert1+((ppluint32)wert2<<8)+((ppluint32)wert3<<16)+((ppluint32)wert4<<24));
+		uint8_t wert1,wert2,wert3,wert4;
+		wert1=((uint8_t*)Adresse)[3];
+		wert2=((uint8_t*)Adresse)[2];
+		wert3=((uint8_t*)Adresse)[1];
+		wert4=((uint8_t*)Adresse)[0];
+ 		return((uint32_t) (uint32_t)wert1+((uint32_t)wert2<<8)+((uint32_t)wert3<<16)+((uint32_t)wert4<<24));
 	#endif
 }
 
@@ -733,31 +719,31 @@ ppluint32 PeekN32 (const void *Adresse)
  * @return Ausgelesener Wert
  * @see Beschreibung von \ref PPLGroupPeekPoke
  */
-ppluint64 PeekN64 (const void *Adresse)
+uint64_t PeekN64 (const void *Adresse)
 {
 	#ifdef __BIG_ENDIAN__
-		ppluint8 wert1,wert2,wert3,wert4,wert5,wert6,wert7,wert8;
-		wert1=((ppluint8*)Adresse)[7];
-		wert2=((ppluint8*)Adresse)[6];
-		wert3=((ppluint8*)Adresse)[5];
-		wert4=((ppluint8*)Adresse)[4];
-		wert5=((ppluint8*)Adresse)[3];
-		wert6=((ppluint8*)Adresse)[2];
-		wert7=((ppluint8*)Adresse)[1];
-		wert8=((ppluint8*)Adresse)[0];
-		return((ppluint64) (ppluint64)wert1+((ppluint64)wert2<<8)+((ppluint64)wert3<<16)+((ppluint64)wert4<<24)+((ppluint64)wert5<<32)+((ppluint64)wert6<<40)+((ppluint64)wert7<<48)+((ppluint64)wert8<<56));
+		uint8_t wert1,wert2,wert3,wert4,wert5,wert6,wert7,wert8;
+		wert1=((uint8_t*)Adresse)[7];
+		wert2=((uint8_t*)Adresse)[6];
+		wert3=((uint8_t*)Adresse)[5];
+		wert4=((uint8_t*)Adresse)[4];
+		wert5=((uint8_t*)Adresse)[3];
+		wert6=((uint8_t*)Adresse)[2];
+		wert7=((uint8_t*)Adresse)[1];
+		wert8=((uint8_t*)Adresse)[0];
+		return((uint64_t) (uint64_t)wert1+((uint64_t)wert2<<8)+((uint64_t)wert3<<16)+((uint64_t)wert4<<24)+((uint64_t)wert5<<32)+((uint64_t)wert6<<40)+((uint64_t)wert7<<48)+((uint64_t)wert8<<56));
 
 	#else
-		ppluint8 wert1,wert2,wert3,wert4,wert5,wert6,wert7,wert8;
-		wert1=((ppluint8*)Adresse)[7];
-		wert2=((ppluint8*)Adresse)[6];
-		wert3=((ppluint8*)Adresse)[5];
-		wert4=((ppluint8*)Adresse)[4];
-		wert5=((ppluint8*)Adresse)[3];
-		wert6=((ppluint8*)Adresse)[2];
-		wert7=((ppluint8*)Adresse)[1];
-		wert8=((ppluint8*)Adresse)[0];
- 		return((ppluint64) (ppluint64)wert1+((ppluint64)wert2<<8)+((ppluint64)wert3<<16)+((ppluint64)wert4<<24)+((ppluint64)wert5<<32)+((ppluint64)wert6<<40)+((ppluint64)wert7<<48)+((ppluint64)wert8<<56));
+		uint8_t wert1,wert2,wert3,wert4,wert5,wert6,wert7,wert8;
+		wert1=((uint8_t*)Adresse)[7];
+		wert2=((uint8_t*)Adresse)[6];
+		wert3=((uint8_t*)Adresse)[5];
+		wert4=((uint8_t*)Adresse)[4];
+		wert5=((uint8_t*)Adresse)[3];
+		wert6=((uint8_t*)Adresse)[2];
+		wert7=((uint8_t*)Adresse)[1];
+		wert8=((uint8_t*)Adresse)[0];
+ 		return((uint64_t) (uint64_t)wert1+((uint64_t)wert2<<8)+((uint64_t)wert3<<16)+((uint64_t)wert4<<24)+((uint64_t)wert5<<32)+((uint64_t)wert6<<40)+((uint64_t)wert7<<48)+((uint64_t)wert8<<56));
 	#endif
 }
 

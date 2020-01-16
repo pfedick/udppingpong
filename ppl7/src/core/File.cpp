@@ -33,13 +33,10 @@
  *******************************************************************************/
 
 
-#include "prolog.h"
-
-//#define WIN32FILES
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "prolog_ppl7.h"
 
 #ifdef HAVE_WCHAR_H
 	#include <wchar.h>
@@ -308,7 +305,7 @@ File::File (FILE * handle)
 		if (ff!=NULL) close();
 		ff=handle;
 		mysize=size();
-		this->seek((ppluint64)0);
+		this->seek((uint64_t)0);
 	}
 }
 
@@ -550,18 +547,18 @@ bool File::isOpen() const
 }
 
 
-ppluint64 File::size () const
+uint64_t File::size () const
 {
 	if (ff!=NULL) {
 		#ifdef WIN32FILES
 			BY_HANDLE_FILE_INFORMATION info;
 			if (GetFileInformationByHandle((HANDLE)ff,&info))
-				return (((ppluint64)info.nFileSizeHigh)<<32)+info.nFileSizeLow;
+				return (((uint64_t)info.nFileSizeHigh)<<32)+info.nFileSizeLow;
 			throwErrno(errno,filename());	// ???
 		#else
 			struct stat buf;
 			if ((::fstat (fileno((FILE*)ff),&buf))==0)
-				return ((ppluint64)buf.st_size);
+				return ((uint64_t)buf.st_size);
 			throwErrno(errno,filename());
 		#endif
 	}
@@ -654,7 +651,7 @@ void File::rewind ()
 	throw FileNotOpenException();
 }
 
-void File::seek(ppluint64 position)
+void File::seek(uint64_t position)
 {
 	if (ff==NULL) {
 		throw FileNotOpenException();
@@ -686,7 +683,7 @@ void File::seek(ppluint64 position)
 	return;
 }
 
-ppluint64 File::seek (pplint64 offset, SeekOrigin origin )
+uint64_t File::seek (int64_t offset, SeekOrigin origin )
 {
 	if (ff==NULL) throw FileNotOpenException();
 #ifdef _HAVE_FSEEKO
@@ -718,7 +715,7 @@ ppluint64 File::seek (pplint64 offset, SeekOrigin origin )
 	return 0;
 }
 
-ppluint64 File::tell()
+uint64_t File::tell()
 {
 	if (ff!=NULL) {
 		#ifdef WIN32FILES
@@ -732,11 +729,11 @@ ppluint64 File::tell()
 		#else
 			fpos_t p;
 			if (fgetpos((FILE*)ff,&p)!=0) throwErrno(errno,filename());
-			ppluint64 ret;
+			uint64_t ret;
 			#ifdef FPOS_T_STRUCT
-				ret=(pplint64)p.__pos;
+				ret=(int64_t)p.__pos;
 			#else
-				ret=(pplint64)p;
+				ret=(int64_t)p;
 			#endif
 			return ret;
 		#endif
@@ -783,7 +780,7 @@ char * File::fgets (char *buffer, size_t num)
 		if (::feof((FILE*)ff)) return NULL;
 		else throwErrno(errno,filename());
 	}
-	ppluint64 by=(ppluint64)strlen(buffer);
+	uint64_t by=(uint64_t)strlen(buffer);
 	pos+=by;
 	return buffer;
 }
@@ -803,7 +800,7 @@ wchar_t *File::fgetws (wchar_t *buffer, size_t num)
 		if (::feof((FILE*)ff)) return NULL;
 		else throwErrno(errno,filename());
 	}
-	ppluint64 by=(ppluint64)wcslen(buffer)*sizeof(wchar_t);
+	uint64_t by=(uint64_t)wcslen(buffer)*sizeof(wchar_t);
 	pos+=by;
 	return buffer;
 #endif
@@ -931,7 +928,7 @@ void File::sync()
 #endif
 }
 
-void File::truncate(ppluint64 length)
+void File::truncate(uint64_t length)
 {
 	if (ff==NULL) throw FileNotOpenException();
 #ifdef HAVE_FTRUNCATE
@@ -1038,7 +1035,7 @@ void File::setMapReadAhead(size_t bytes)
 }
 
 
-const char *File::map(ppluint64 position, size_t bytes)
+const char *File::map(uint64_t position, size_t bytes)
 {
 	if (ff==NULL) throw FileNotOpenException();
 	if (position+bytes<=mysize) {
@@ -1052,7 +1049,7 @@ const char *File::map(ppluint64 position, size_t bytes)
 		LastMapStart=position;
 		if (ReadAhead>0 && bytes<ReadAhead) {
 			bytes=ReadAhead;
-			if (position+(ppluint64)bytes>mysize) bytes=(size_t)(mysize-position);
+			if (position+(uint64_t)bytes>mysize) bytes=(size_t)(mysize-position);
 		}
 		LastMapSize=bytes;
 		return (const char*)this->mmap(position,bytes,1,0);
@@ -1060,7 +1057,7 @@ const char *File::map(ppluint64 position, size_t bytes)
 	throw OverflowException();
 }
 
-char *File::mapRW(ppluint64 position, size_t bytes)
+char *File::mapRW(uint64_t position, size_t bytes)
 {
 	if (ff==NULL) throw FileNotOpenException();
 	if (position+bytes<=mysize) {
@@ -1110,7 +1107,7 @@ int File::munmap(void *addr, size_t len)
 static int __pagesize=0;
 #endif
 
-void *File::mmap(ppluint64 position, size_t size, int prot, int flags)
+void *File::mmap(uint64_t position, size_t size, int prot, int flags)
 {
 #ifdef HAVE_MMAP
 	int mflags=0;
@@ -1297,7 +1294,7 @@ void *File::load(const String &filename, size_t *size)
  * @param bytes Position, an der die Datei abgeschnitten werden soll.
  * \return Kein Returnwert. Im Fehlerfall wird eine Exception geworfen.
  */
-void File::truncate(const String &filename, ppluint64 bytes)
+void File::truncate(const String &filename, uint64_t bytes)
 {
 #ifdef HAVE_TRUNCATE
 	if (filename.isEmpty()) throw IllegalArgumentException();
@@ -1352,15 +1349,15 @@ void File::copy(const String &oldfile, const String &newfile)
 	File f1, f2;
 	f1.open(oldfile,READ);
 	f2.open(newfile,WRITE);
-	ppluint64 bsize=1024*1024;
+	uint64_t bsize=1024*1024;
 	if (f1.mysize<bsize) bsize=f1.mysize;
 	void *buffer=malloc((size_t)bsize);
 	if (!buffer) throw OutOfMemoryException();
-	ppluint64 rest=f1.mysize;
+	uint64_t rest=f1.mysize;
 	while (rest) {
-		ppluint64 bytes=bsize;
+		uint64_t bytes=bsize;
 		if (bytes>rest) bytes=rest;
-		ppluint64 done=f1.fread(buffer,1,bytes);
+		uint64_t done=f1.fread(buffer,1,bytes);
 		if (done!=bytes) {
 			// Sollte eigentlich nicht vorkommen
 			f2.close();

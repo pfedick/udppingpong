@@ -129,7 +129,7 @@ void UDPEchoReceiverThread::run()
  *
  * @return Anzahl Pakete
  */
-ppluint64 UDPEchoReceiverThread::getPacketsReceived() const
+int64_t UDPEchoReceiverThread::getPacketsReceived() const
 {
 	return counter_received;
 }
@@ -138,7 +138,7 @@ ppluint64 UDPEchoReceiverThread::getPacketsReceived() const
  *
  * @return Anzahl Bytes
  */
-ppluint64 UDPEchoReceiverThread::getBytesReceived() const
+int64_t UDPEchoReceiverThread::getBytesReceived() const
 {
 	return bytes_received;
 }

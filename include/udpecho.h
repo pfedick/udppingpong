@@ -28,16 +28,16 @@
 #include <unistd.h>
 
 typedef struct {
-		ppluint64 id;
+		int64_t id;
 		double time;
 } PACKET;
 
 class UDPEchoCounter {
 	public:
-		ppluint64 packets_received;
-		ppluint64 packets_send;
-		ppluint64 bytes_received;
-		ppluint64 bytes_send;
+		int64_t packets_received;
+		int64_t packets_send;
+		int64_t bytes_received;
+		int64_t bytes_send;
 		double sampleTime;
 		void clear();
 		void exportToArray(ppl7::AssocArray &data) const;
@@ -49,14 +49,14 @@ class UDPSenderResults
 {
 	public:
 		int			queryrate;
-		ppluint64	counter_send;
-		ppluint64	counter_received;
-		ppluint64	bytes_send;
-		ppluint64	bytes_received;
-		ppluint64	counter_errors;
-		ppluint64	packages_lost;
-		ppluint64   counter_0bytes;
-		ppluint64   counter_errorcodes[255];
+		int64_t	counter_send;
+		int64_t	counter_received;
+		int64_t	bytes_send;
+		int64_t	bytes_received;
+		int64_t	counter_errors;
+		int64_t	packages_lost;
+		int64_t   counter_0bytes;
+		int64_t   counter_errorcodes[255];
 		double		duration;
 		double		rtt_total;
 		double		rtt_min;
@@ -68,8 +68,8 @@ class UDPEchoReceiverThread : public ppl7::Thread
 	private:
 		int sockfd;
 		ppl7::ByteArray recbuffer;
-		ppluint64 counter_received;
-		ppluint64 bytes_received;
+		int64_t counter_received;
+		int64_t bytes_received;
 
 		double rtt_total, rtt_min, rtt_max;
 
@@ -81,8 +81,8 @@ class UDPEchoReceiverThread : public ppl7::Thread
 		void setSocketDescriptor(int sockfd);
 		void run();
 		void resetCounter();
-		ppluint64 getPacketsReceived() const;
-		ppluint64 getBytesReceived() const;
+		int64_t getPacketsReceived() const;
+		int64_t getBytesReceived() const;
 		double getRoundTripTimeAverage() const;
 		double getRoundTripTimeMin() const;
 		double getRoundTripTimeMax() const;
@@ -137,9 +137,9 @@ class UDPEchoSenderThread : public ppl7::Thread
 
 		ppl7::String destination;
 		size_t packetsize;
-		ppluint64 queryrate;
-		ppluint64 counter_send, errors, counter_0bytes;
-		ppluint64 counter_errorcodes[255];
+		int64_t queryrate;
+		int64_t counter_send, errors, counter_0bytes;
+		int64_t counter_errorcodes[255];
 		int runtime;
 		int timeout;
 		double Zeitscheibe;
@@ -164,19 +164,19 @@ class UDPEchoSenderThread : public ppl7::Thread
 		void setPacketsize(size_t size);
 		void setRuntime(int seconds);
 		void setTimeout(int seconds);
-		void setQueryRate(ppluint64 qps);
+		void setQueryRate(int64_t qps);
 		void setZeitscheibe(float ms);
 		void setIgnoreResponses(bool flag);
 		void setSourceIP(const ppl7::String &ip);
 		void setVerbose(bool verbose);
 		void setAlwaysRandomize(bool flag);
 		void run();
-		ppluint64 getPacketsSend() const;
-		ppluint64 getPacketsReceived() const;
-		ppluint64 getBytesReceived() const;
-		ppluint64 getErrors() const;
-		ppluint64 getCounter0Bytes() const;
-		ppluint64 getCounterErrorCode(int err) const;
+		int64_t getPacketsSend() const;
+		int64_t getPacketsReceived() const;
+		int64_t getBytesReceived() const;
+		int64_t getErrors() const;
+		int64_t getCounter0Bytes() const;
+		int64_t getCounterErrorCode(int err) const;
 		double getDuration() const;
 		double getRoundTripTimeAverage() const;
 		double getRoundTripTimeMin() const;
@@ -219,8 +219,8 @@ class UDPEchoBouncerThread : public ppl7::Thread
 	public:
 		class Counter {
 			public:
-				ppluint64 count;
-				ppluint64 bytes;
+				int64_t count;
+				int64_t bytes;
 		};
 	private:
 		int sockfd;

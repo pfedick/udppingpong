@@ -32,7 +32,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  *******************************************************************************/
 
-#include "prolog.h"
+#include "prolog_ppl7.h"
 #ifdef HAVE_STDIO_H
 #include <stdio.h>
 #endif
@@ -64,11 +64,11 @@
 #define _WINSOCKAPI_   /* Prevent inclusion of winsock.h in windows.h */
 #include <windows.h>
 #endif
-#include "threads.h"
+#include "threads_ppl7.h"
 
 namespace ppl7 {
 
-static ppluint64 global_thread_id=0;
+static uint64_t global_thread_id=0;
 static Mutex GlobalThreadMutex;
 
 
@@ -192,7 +192,7 @@ THREADDATA * GetThreadData()
 #endif
 }
 
-ppluint64 ThreadID()
+uint64_t ThreadID()
 {
 	THREADDATA *ptr=GetThreadData();
 	return ptr->threadId;
@@ -262,7 +262,7 @@ void SetTLSData(void *data)
 #endif
 
 
-ppluint64 StartThread(void (*start_routine)(void *),void *data)
+uint64_t StartThread(void (*start_routine)(void *),void *data)
 {
 	THREADSTARTUP *ts=(THREADSTARTUP*)malloc(sizeof(THREADSTARTUP));
 	if (!ts) throw OutOfMemoryException();
@@ -820,7 +820,7 @@ void Thread::threadSleep(int msec)
  * \return Liefert einen 64-Bit-Wert mit der Thread-ID zurück.
  * \see \ref PPLGroupThreads
  */
-ppluint64 Thread::threadGetID()
+uint64_t Thread::threadGetID()
 {
 	THREADDATA *t=(THREADDATA *)threaddata;
 	if (!t) return 0;

@@ -33,13 +33,13 @@ class UDPSender
 		{
 			public:
 				int			queryrate;
-				ppluint64	counter_send;
-				ppluint64	counter_received;
-				ppluint64	bytes_received;
-				ppluint64	counter_errors;
-				ppluint64	packages_lost;
-				ppluint64   counter_0bytes;
-				ppluint64   counter_errorcodes[255];
+				int64_t	counter_send;
+				int64_t	counter_received;
+				int64_t	bytes_received;
+				int64_t	counter_errors;
+				int64_t	packages_lost;
+				int64_t   counter_0bytes;
+				int64_t   counter_errorcodes[255];
 				double		duration;
 				double		rtt_total;
 				double		rtt_min;

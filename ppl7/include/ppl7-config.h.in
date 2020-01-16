@@ -2,11 +2,6 @@
  * This file is part of "Patrick's Programming Library", Version 7 (PPL7).
  * Web: http://www.pfp.de/ppl/
  *
- * $Author$
- * $Revision$
- * $Date$
- * $Id$
- *
  *******************************************************************************
  * Copyright (c) 2013, Patrick Fedick <patrick@pfp.de>
  * All rights reserved.
@@ -39,32 +34,24 @@
 #undef HAVE_STDLIB_H
 #undef HAVE_STDIO_H
 #undef HAVE_STRINGS_H
+#undef HAVE_STRING_H
 #undef HAVE_STDARG_H
+#undef HAVE_STDINT_H
+#undef HAVE_INTTYPES_H
 
 #undef MINGW32
 
 #undef size_t
+#undef wchar_t
+#undef int8_t
+#undef int16_t
+#undef int32_t
+#undef int64_t
+#undef uint8_t
+#undef uint16_t
+#undef uint32_t
+#undef uint64_t
+#undef uintptr_t
 
-#ifndef _PPL6_CONFIG
-/*
- * Type definitions
- */
-
-#define ppluint8	undefined
-#define pplint8		undefined
-#define ppluint16	undefined
-#define pplint16	undefined
-#define ppluint32	undefined
-#define pplint32	undefined
-#define ppluint64	undefined
-#define pplint64	undefined
-
-#define pplfloat	float
-#define ppldouble	double
-#define pplbool		bool
-#define pplchar		char
-#define ppluchar	unsigned char
-#define ppliptr		undefined
-#endif // #ifndef _PPL6_CONFIG
 
 #endif

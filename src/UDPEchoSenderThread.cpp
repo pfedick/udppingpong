@@ -41,7 +41,7 @@ ppl7::Mutex PacketIdMutex;
 /*!\brief Globaler Zähler für die Paket-ID
  *
  */
-ppluint64 PacketId=0;
+int64_t PacketId=0;
 
 
 /*!\class SenderThread
@@ -131,7 +131,7 @@ void UDPEchoSenderThread::setTimeout(int seconds)
  *
  * @param qps Queries pro Sekunde
  */
-void UDPEchoSenderThread::setQueryRate(ppluint64 qps)
+void UDPEchoSenderThread::setQueryRate(int64_t qps)
 {
 	queryrate=qps;
 }
@@ -318,11 +318,11 @@ static inline double getNsec()
 void UDPEchoSenderThread::runWithRateLimit()
 {
 	struct timespec ts;
-	ppluint64 total_zeitscheiben=runtime*1000/(Zeitscheibe*1000.0);
-	ppluint64 queries_rest=runtime*queryrate;
+	int64_t total_zeitscheiben=runtime*1000/(Zeitscheibe*1000.0);
+	int64_t queries_rest=runtime*queryrate;
 	ppl7::SockAddr addr=Socket.getSockAddr();
 	if (verbose) {
-		printf ("Laufzeit: %d s, Dauer Zeitscheibe: %0.6f s, Zeitscheiben total: %llu, Qpzs: %llu, Source: %s:%d\n",
+		printf ("Laufzeit: %d s, Dauer Zeitscheibe: %0.6f s, Zeitscheiben total: %lu, Qpzs: %lu, Source: %s:%d\n",
 				runtime,Zeitscheibe,total_zeitscheiben,
 				queries_rest/total_zeitscheiben,
 				(const char*)addr.toIPAddress().toString(), addr.port());
@@ -335,13 +335,13 @@ void UDPEchoSenderThread::runWithRateLimit()
 	double end=start+(double)runtime;
 	double total_idle=0.0;
 
-	for (ppluint64 z=0;z<total_zeitscheiben;z++) {
+	for (int64_t z=0;z<total_zeitscheiben;z++) {
 		naechste_zeitscheibe+=Zeitscheibe;
-		ppluint64 restscheiben=total_zeitscheiben-z;
-		ppluint64 queries_pro_zeitscheibe=queries_rest/restscheiben;
+		int64_t restscheiben=total_zeitscheiben-z;
+		int64_t queries_pro_zeitscheibe=queries_rest/restscheiben;
 		if (restscheiben==1)
 			queries_pro_zeitscheibe=queries_rest;
-		for (ppluint64 i=0;i<queries_pro_zeitscheibe;i++) {
+		for (int64_t i=0;i<queries_pro_zeitscheibe;i++) {
 			sendPacket();
 		}
 
@@ -391,7 +391,7 @@ void UDPEchoSenderThread::waitForTimeout()
  *
  * @return Anzahl Pakete
  */
-ppluint64 UDPEchoSenderThread::getPacketsSend() const
+int64_t UDPEchoSenderThread::getPacketsSend() const
 {
 	return counter_send;
 }
@@ -400,7 +400,7 @@ ppluint64 UDPEchoSenderThread::getPacketsSend() const
  *
  * @return Anzahl Pakete
  */
-ppluint64 UDPEchoSenderThread::getPacketsReceived() const
+int64_t UDPEchoSenderThread::getPacketsReceived() const
 {
 	return receiver.getPacketsReceived();
 }
@@ -409,7 +409,7 @@ ppluint64 UDPEchoSenderThread::getPacketsReceived() const
  *
  * @return Anzahl Bytes
  */
-ppluint64 UDPEchoSenderThread::getBytesReceived() const
+int64_t UDPEchoSenderThread::getBytesReceived() const
 {
 	return receiver.getBytesReceived();
 }
@@ -418,17 +418,17 @@ ppluint64 UDPEchoSenderThread::getBytesReceived() const
  *
  * @return Anzahl Fehler
  */
-ppluint64 UDPEchoSenderThread::getErrors() const
+int64_t UDPEchoSenderThread::getErrors() const
 {
 	return errors;
 }
 
-ppluint64 UDPEchoSenderThread::getCounter0Bytes() const
+int64_t UDPEchoSenderThread::getCounter0Bytes() const
 {
 	return counter_0bytes;
 }
 
-ppluint64 UDPEchoSenderThread::getCounterErrorCode(int err) const
+int64_t UDPEchoSenderThread::getCounterErrorCode(int err) const
 {
 	if (err < 255) return counter_errorcodes[err];
 	return 0;}

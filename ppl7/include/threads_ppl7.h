@@ -31,23 +31,44 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *******************************************************************************/
-#ifndef _GNU_SOURCE
-#define  _GNU_SOURCE
+
+#include "prolog_ppl7.h"
+#ifdef HAVE_STDIO_H
+#include <stdio.h>
+#endif
+#ifdef HAVE_STDLIB_H
+#include <stdlib.h>
+#endif
+#ifdef HAVE_STRING_H
+#include <string.h>
+#endif
+#ifdef HAVE_STDARG_H
+#include <stdarg.h>
 #endif
 
-#ifndef _PPL7_CONFIG
-	#ifdef PPL7LIB
-		#ifdef HAVE_CONFIG_H
-			#include "config.h"
-		#else
-			#ifdef PPLVISUALC
-				#include "ppl7-visualc-config.h"
-			#elif defined _WIN32
-				#include "ppl7-config.h"
-			#endif
-		#endif
-	#else
-		#include <ppl7-config.h>
-	#endif
+#include "ppl7.h"
+
+
+namespace ppl7 {
+
+
+typedef struct tagThreadData {
+	uint64_t	threadId;
+#ifdef _WIN32
+	HANDLE	thread;
+	DWORD	dwThreadID;
+#elif defined HAVE_PTHREADS
+	pthread_t thread;
+	pthread_attr_t	attr;
+#else
+	int	thread;
 #endif
-#include "compat.h"
+	void		(*mysql_thread_end)();
+				// Bit  0: Thread hat MySQL benutzt
+	void *clientData;
+} THREADDATA;
+
+THREADDATA * GetThreadData();
+
+
+} // EOF namespace ppl7

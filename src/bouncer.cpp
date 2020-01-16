@@ -90,7 +90,7 @@ void run(UDPEchoBouncer &bouncer, bool quiet)
 			if (ppl7::GetMicrotime() >= end) {
 				UDPEchoCounter counter=bouncer.getCounter();
 				sampleSensorData(stat_end);
-				printf("Packets per second: %10llu, Durchsatz: %10llu Mbit, RX: %8lu, TX: %8lu\n",
+				printf("Packets per second: %10lu, Durchsatz: %10lu Mbit, RX: %8lu, TX: %8lu\n",
 						counter.packets_received, counter.bytes_received*8/(1024*1024),
 						stat_end.net_total.receive.packets-stat_start.net_total.receive.packets,
 						stat_end.net_total.transmit.packets-stat_start.net_total.transmit.packets

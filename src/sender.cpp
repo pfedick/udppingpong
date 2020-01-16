@@ -136,8 +136,8 @@ ppl7::Array UDPSender::getQueryRates(const ppl7::String &QueryRates)
 	} else {
 		ppl7::Array matches;
 		if (QueryRates.pregMatch("/^([0-9]+)-([0-9]+),([0-9]+)$", matches)) {
-			for (ppluint64 i = matches[1].toUnsignedInt64(); i <= matches[2].toUnsignedInt64(); i += matches[3].toUnsignedInt64()) {
-				rates.addf("%llu", i);
+			for (uint64_t i = matches[1].toUnsignedInt64(); i <= matches[2].toUnsignedInt64(); i += matches[3].toUnsignedInt64()) {
+				rates.addf("%lu", i);
 			}
 
 		} else {
@@ -379,10 +379,10 @@ void UDPSender::saveResultsToCsv(const UDPSender::Results &result)
 {
 
 	if (CSVFile.isOpen()) {
-		CSVFile.putsf ("%llu;%llu;%llu;%0.3f;%0.4f;%0.4f;%0.4f;\n",
-				(ppluint64)((double)result.counter_send/result.duration),
-				(ppluint64)((double)result.counter_received/result.duration),
-				(ppluint64)((double)result.counter_errors/result.duration),
+		CSVFile.putsf ("%lu;%lu;%lu;%0.3f;%0.4f;%0.4f;%0.4f;\n",
+				(int64_t)((double)result.counter_send/result.duration),
+				(int64_t)((double)result.counter_received/result.duration),
+				(int64_t)((double)result.counter_errors/result.duration),
 				(double)result.packages_lost*100.0/(double)result.counter_send,
 				result.rtt_total*1000.0/(double)ThreadCount,
 				result.rtt_min*1000.0,
@@ -400,27 +400,27 @@ void UDPSender::saveResultsToCsv(const UDPSender::Results &result)
  */
 void UDPSender::presentResults(const UDPSender::Results &result)
 {
-	ppluint64 qps_send=(ppluint64)((double)result.counter_send/result.duration);
-	ppluint64 qps_received=(ppluint64)((double)result.counter_received/result.duration);
-	ppluint64 bytes_received=(ppluint64)((double)result.bytes_received/result.duration);
-	printf ("Packets send:     %10llu, Qps: %10llu, Durchsatz: %10llu MBit\n",result.counter_send,
+	int64_t qps_send=(int64_t)((double)result.counter_send/result.duration);
+	int64_t qps_received=(int64_t)((double)result.counter_received/result.duration);
+	int64_t bytes_received=(int64_t)((double)result.bytes_received/result.duration);
+	printf ("Packets send:     %10lu, Qps: %10lu, Durchsatz: %10lu MBit\n",result.counter_send,
 			qps_send,
 			qps_send*Packetsize*8/(1024*1024));
-	printf ("Packets received: %10llu, Qps: %10llu, Durchsatz: %10llu MBit\n",result.counter_received,
+	printf ("Packets received: %10lu, Qps: %10lu, Durchsatz: %10lu MBit\n",result.counter_received,
 			qps_received,
 			bytes_received*8/(1024*1024));
-	printf ("Packets lost:     %10llu = %0.3f %%\n",result.packages_lost,
+	printf ("Packets lost:     %10lu = %0.3f %%\n",result.packages_lost,
 			(double)result.packages_lost*100.0/(double)result.counter_send);
 
-	printf ("Errors:           %10llu, Qps: %10llu\n",result.counter_errors,
-			(ppluint64)((double)result.counter_errors/result.duration));
+	printf ("Errors:           %10lu, Qps: %10lu\n",result.counter_errors,
+			(int64_t)((double)result.counter_errors/result.duration));
 
-	printf ("Errors 0Byte:     %10llu, Qps: %10llu\n",result.counter_0bytes,
-			(ppluint64)((double)result.counter_0bytes/result.duration));
+	printf ("Errors 0Byte:     %10lu, Qps: %10lu\n",result.counter_0bytes,
+			(int64_t)((double)result.counter_0bytes/result.duration));
 	for (int i=0;i<255;i++) {
 		if (result.counter_errorcodes[i]>0) {
-			printf ("Errors %3d:       %10llu, Qps: %10llu [%s]\n",i, result.counter_errorcodes[i],
-					(ppluint64)((double)result.counter_errorcodes[i]/result.duration),
+			printf ("Errors %3d:       %10lu, Qps: %10lu [%s]\n",i, result.counter_errorcodes[i],
+					(int64_t)((double)result.counter_errorcodes[i]/result.duration),
 					strerror(i));
 
 		}

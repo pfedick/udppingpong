@@ -1,11 +1,7 @@
+/* ppl7/include/ppl7-config.h.  Generated from ppl7-config.h.in by configure.  */
 /*******************************************************************************
  * This file is part of "Patrick's Programming Library", Version 7 (PPL7).
  * Web: http://www.pfp.de/ppl/
- *
- * $Author$
- * $Revision$
- * $Date$
- * $Id$
  *
  *******************************************************************************
  * Copyright (c) 2013, Patrick Fedick <patrick@pfp.de>
@@ -14,10 +10,10 @@
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
  *    1. Redistributions of source code must retain the above copyright notice, this
- *       list of conditions and the following disclaimer.
+ *       list of conditions and the following disclaimer. 
  *    2. Redistributions in binary form must reproduce the above copyright notice,
  *       this list of conditions and the following disclaimer in the documentation
- *       and/or other materials provided with the distribution.
+ *       and/or other materials provided with the distribution. 
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -31,44 +27,32 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *******************************************************************************/
+ 
+#ifndef _PPL7_CONFIG
+#define _PPL7_CONFIG
 
-#include "prolog.h"
-#ifdef HAVE_STDIO_H
-#include <stdio.h>
+#define HAVE_SYS_TYPES_H 1
+#define HAVE_STDLIB_H 1
+#define HAVE_STDIO_H 1
+#define HAVE_STRINGS_H 1
+#define HAVE_STRING_H 1
+#define HAVE_STDARG_H 1
+#define HAVE_STDINT_H 1
+#define HAVE_INTTYPES_H 1
+
+/* #undef MINGW32 */
+
+/* #undef size_t */
+/* #undef wchar_t */
+/* #undef int8_t */
+/* #undef int16_t */
+/* #undef int32_t */
+/* #undef int64_t */
+/* #undef uint8_t */
+/* #undef uint16_t */
+/* #undef uint32_t */
+/* #undef uint64_t */
+/* #undef uintptr_t */
+
+
 #endif
-#ifdef HAVE_STDLIB_H
-#include <stdlib.h>
-#endif
-#ifdef HAVE_STRING_H
-#include <string.h>
-#endif
-#ifdef HAVE_STDARG_H
-#include <stdarg.h>
-#endif
-
-#include "ppl7.h"
-
-
-namespace ppl7 {
-
-
-typedef struct tagThreadData {
-	ppluint64	threadId;
-#ifdef _WIN32
-	HANDLE	thread;
-	DWORD	dwThreadID;
-#elif defined HAVE_PTHREADS
-	pthread_t thread;
-	pthread_attr_t	attr;
-#else
-	int	thread;
-#endif
-	void		(*mysql_thread_end)();
-				// Bit  0: Thread hat MySQL benutzt
-	void *clientData;
-} THREADDATA;
-
-THREADDATA * GetThreadData();
-
-
-} // EOF namespace ppl7

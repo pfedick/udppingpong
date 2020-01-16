@@ -55,17 +55,17 @@ PPL7EXCEPTION(NotConnectedException,NetworkException);
 PPL7EXCEPTION(CouldNotOpenSocketException,NetworkException);				// 393
 PPL7EXCEPTION(IllegalPortException,NetworkException);				// 393
 PPL7EXCEPTION(CouldNotBindToInterfaceException,NetworkException);	// 394
-PPL7EXCEPTION(ConnectionRefusedException,NetworkException);
+PPL7EXCEPTION(ConnectionRefusedException,NetworkException);				// ECONNREFUSED
 PPL7EXCEPTION(NetworkDownException,NetworkException);
-PPL7EXCEPTION(NetworkUnreachableException,NetworkException);
+PPL7EXCEPTION(NetworkUnreachableException, NetworkException);			// ENETUNREACH
 PPL7EXCEPTION(NetworkDroppedConnectionOnResetException,NetworkException);
 PPL7EXCEPTION(SoftwareCausedConnectionAbortException,NetworkException);
 PPL7EXCEPTION(ConnectionResetByPeerException,NetworkException);
 PPL7EXCEPTION(NoBufferSpaceException,NetworkException);
 PPL7EXCEPTION(SocketIsAlreadyConnectedException,NetworkException);
 PPL7EXCEPTION(CantSendAfterSocketShutdownException,NetworkException);
-PPL7EXCEPTION(TooManyReferencesException,NetworkException);
-PPL7EXCEPTION(HostDownException,NetworkException);
+PPL7EXCEPTION(TooManyReferencesException, NetworkException);			// ETOOMANYREFS
+PPL7EXCEPTION(HostDownException,NetworkException);						// EHOSTDOWN
 PPL7EXCEPTION(NoRouteToHostException,NetworkException);
 PPL7EXCEPTION(InvalidSocketException,NetworkException);
 PPL7EXCEPTION(UnknownOptionException,NetworkException);
@@ -77,6 +77,7 @@ PPL7EXCEPTION(SettingSocketOptionException,NetworkException);
 PPL7EXCEPTION(InvalidIpAddressException,NetworkException);
 PPL7EXCEPTION(InvalidNetworkAddressException,NetworkException);
 PPL7EXCEPTION(InvalidNetmaskOrPrefixlenException,NetworkException);
+PPL7EXCEPTION(ConnectionTimeoutException, NetworkException);				// ETIMEDOUT
 
 PPL7EXCEPTION(ResolverException,Exception);
 PPL7EXCEPTION(UnknownHostException,Exception);
@@ -201,10 +202,10 @@ void InitSockets();
 String GetHostname();
 size_t GetHostByName(const String &name, std::list<IPAddress> &result,ResolverFlags flags=af_unspec);
 size_t GetHostByAddr(const IPAddress &addr, String &hostname);
-ppluint32 Ntohl(ppluint32 net);
-ppluint32 Htonl(ppluint32 host);
-ppluint16 Ntohs(ppluint16 net);
-ppluint16 Htons(ppluint16 host);
+uint32_t Ntohl(uint32_t net);
+uint32_t Htonl(uint32_t host);
+uint16_t Ntohs(uint16_t net);
+uint16_t Htons(uint16_t host);
 bool IsBigEndian();
 bool IsLittleEndian();
 

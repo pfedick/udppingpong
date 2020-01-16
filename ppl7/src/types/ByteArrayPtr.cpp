@@ -32,7 +32,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  *******************************************************************************/
 
-#include "prolog.h"
+#include "prolog_ppl7.h"
 #ifdef HAVE_STDIO_H
 #include <stdio.h>
 #endif
@@ -383,7 +383,7 @@ const char* ByteArrayPtr::toCharPtr() const
  *
  * @return CRC32-Prüfsumme
  */
-ppluint32 ByteArrayPtr::crc32() const
+uint32_t ByteArrayPtr::crc32() const
 {
 	if (ptrsize==0) throw EmptyDataException();
 	return Crc32(ptradr,ptrsize);

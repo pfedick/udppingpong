@@ -11,9 +11,9 @@ AC_CONFIG_HEADERS([include/config.h])
 
 # PPL7
 AC_CONFIG_SRCDIR([ppl7/include/ppl7.h])
-AC_CONFIG_SRCDIR([ppl7/include/config.h.in])
+AC_CONFIG_SRCDIR([ppl7/include/ppl7-config.h.in])
 AC_CONFIG_FILES([ppl7/Makefile])
-AC_CONFIG_HEADERS([ppl7/include/config.h])
+AC_CONFIG_HEADERS([ppl7/include/config_ppl7.h])
 AC_CONFIG_HEADERS([ppl7/include/ppl7-config.h])
 
 

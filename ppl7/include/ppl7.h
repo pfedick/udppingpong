@@ -1,14 +1,8 @@
 /*******************************************************************************
  * This file is part of "Patrick's Programming Library", Version 7 (PPL7).
  * Web: http://www.pfp.de/ppl/
- *
- * $Author$
- * $Revision$
- * $Date$
- * $Id$
- *
  *******************************************************************************
- * Copyright (c) 2013, Patrick Fedick <patrick@pfp.de>
+ * Copyright (c) 2019, Patrick Fedick <patrick@pfp.de>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -38,21 +32,21 @@
 
 #define PPL7_VERSION_MAJOR	7
 #define PPL7_VERSION_MINOR	0
-#define PPL7_VERSION_BUILD	0
-#define PPL7_RELEASEDATE	20180718
-#define PPL7_COPYRIGHT		"Copyright (c) 2018 by Patrick Fedick"
+#define PPL7_VERSION_BUILD	1
+#define PPL7_RELEASEDATE	20191027
+#define PPL7_COPYRIGHT		"Copyright (c) 2019 by Patrick Fedick"
 
 // Inlcude PPL7 configuration file
 #ifndef _PPL7_CONFIG
 	#ifdef PPL7LIB
 		#ifdef MINGW32
-			#include "config.h"
+			#include "config_ppl7.h"
 		#elif defined PPLVISUALC
 			#include "ppl7-visualc-config.h"
 		#elif defined _WIN32
 			#include "ppl7-config.h"
 		#else
-			#include "config.h"
+			#include "config_ppl7.h"
 		#endif
 	#else
 		#include <ppl7-config.h>
@@ -61,6 +55,13 @@
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
+#endif
+#ifdef HAVE_STDINT_H
+#include <stdint.h>
+#endif
+
+#ifdef HAVE_INTTYPES_H
+#include <inttypes.h>
 #endif
 
 #ifdef HAVE_STDLIB_H
@@ -102,6 +103,7 @@
 
 
 namespace ppl7 {
+
 
  class MemoryHeap
  {
@@ -198,7 +200,7 @@ void HexDump(const void *address, size_t bytes, bool skipheader);
 void HexDump(const void *address, size_t bytes);
 String ToBase64(const ByteArrayPtr &bin);
 ByteArray FromBase64(const String &str);
-ppluint32 Crc32(const void* buffer, size_t size);
+uint32_t Crc32(const void* buffer, size_t size);
 String Md5(const void* buffer, size_t size);
 double Calc(const String &expression);
 
@@ -249,29 +251,29 @@ ByteArray &Random(ByteArray &buffer, size_t bytes);
 
 
 // Speicherzugriff
-void Poke8 (void *Adresse, ppluint32 Wert);
-void Poke16 (void *Adresse, ppluint32 Wert);
-void Poke24 (void *Adresse, ppluint32 Wert);
-void Poke32 (void *Adresse, ppluint32 Wert);
-void Poke64 (void *Adresse, ppluint64 Wert);
+void Poke8 (void *Adresse, uint8_t Wert);
+void Poke16 (void *Adresse, uint16_t Wert);
+void Poke24 (void *Adresse, uint32_t Wert);
+void Poke32 (void *Adresse, uint32_t Wert);
+void Poke64 (void *Adresse, uint64_t Wert);
 void PokeFloat(void *Adresse, float Wert);
-ppluint32 Peek8 (const void *Adresse);
-ppluint32 Peek16 (const void *Adresse);
-ppluint32 Peek24 (const void *Adresse);
-ppluint32 Peek32 (const void *Adresse);
-ppluint64 Peek64 (const void *Adresse);
+uint8_t Peek8 (const void *Adresse);
+uint16_t Peek16 (const void *Adresse);
+uint32_t Peek24 (const void *Adresse);
+uint32_t Peek32 (const void *Adresse);
+uint64_t Peek64 (const void *Adresse);
 float	PeekFloat(const void *Adresse);
 
 // Network-Byte-Order
-void PokeN8 (void *Adresse, ppluint32 Wert);
-void PokeN16 (void *Adresse, ppluint32 Wert);
-void PokeN32 (void *Adresse, ppluint32 Wert);
-void PokeN64 (void *Adresse, ppluint64 Wert);
+void PokeN8 (void *Adresse, uint8_t Wert);
+void PokeN16 (void *Adresse, uint16_t Wert);
+void PokeN32 (void *Adresse, uint32_t Wert);
+void PokeN64 (void *Adresse, uint64_t Wert);
 
-ppluint32 PeekN8 (const void *Adresse);
-ppluint32 PeekN16 (const void *Adresse);
-ppluint32 PeekN32 (const void *Adresse);
-ppluint64 PeekN64 (const void *Adresse);
+uint8_t PeekN8 (const void *Adresse);
+uint16_t PeekN16 (const void *Adresse);
+uint32_t PeekN32 (const void *Adresse);
+uint64_t PeekN64 (const void *Adresse);
 
 
 // cpu.cpp
@@ -300,24 +302,24 @@ namespace CPUCAPS {
 }
 
 typedef struct {
-	ppluint32	caps;							// Struktur kann um weitere Informationen erweitert werden
-	ppluint32	bits;
+	uint32_t	caps;							// Struktur kann um weitere Informationen erweitert werden
+	uint32_t	bits;
 
 } CPUCaps;
 
-ppluint32 GetCPUCaps(CPUCaps &cpu);
-ppluint32 GetCPUCaps();
+uint32_t GetCPUCaps(CPUCaps &cpu);
+uint32_t GetCPUCaps();
 
 // Time
 ppl_time_t GetTime(PPLTIME *t);
 ppl_time_t GetTime(PPLTIME *t, ppl_time_t tt);
 ppl_time_t GetTime(PPLTIME &t, ppl_time_t tt);
 ppl_time_t GetTime();
-int USleep(ppluint64 microseconds);		// 1 sec = 1000000 microseconds
-int MSleep(ppluint64 milliseconds);		// 1 sec = 1000 milliseconds
-int SSleep(ppluint64 seconds);
+int USleep(uint64_t microseconds);		// 1 sec = 1000000 microseconds
+int MSleep(uint64_t milliseconds);		// 1 sec = 1000 milliseconds
+int SSleep(uint64_t seconds);
 double GetMicrotime();
-ppluint64 GetMilliSeconds();
+uint64_t GetMilliSeconds();
 
 ppl_time_t MkTime(const String &year, const String &month, const String &day, const String &hour="0", const String &min="0", const String &sec="0");
 ppl_time_t MkTime(int year, int month, int day, int hour=0, int min=0, int sec=0);
@@ -397,10 +399,10 @@ class Signal
 
 
 // Threads
-ppluint64 ThreadID();
+uint64_t ThreadID();
 void	*GetTLSData();
 void	SetTLSData(void *data);
-ppluint64	StartThread(void (*start_routine)(void *),void *data=NULL);
+uint64_t	StartThread(void (*start_routine)(void *),void *data=NULL);
 
 class Thread
 {
@@ -435,7 +437,7 @@ class Thread
 		int		threadIsRunning();
 		int		threadIsSuspended();
 		int		threadGetFlags();
-		ppluint64  threadGetID();
+		uint64_t  threadGetID();
 		int		threadShouldStop();
 		void	threadWaitSuspended(int msec=0);
 		void	threadSleep(int msec=0);
@@ -541,14 +543,14 @@ class FileObject
 		void				setFilename(const String &filename);
 		const String&		filename() const;
 
-		size_t				write (const void * source, size_t bytes, ppluint64 fileposition);
+		size_t				write (const void * source, size_t bytes, uint64_t fileposition);
 		size_t				write (const void * source, size_t bytes);
 		size_t				write (const ByteArrayPtr &object, size_t bytes=0);
-		size_t				read (void * target, size_t bytes, ppluint64 fileposition);
+		size_t				read (void * target, size_t bytes, uint64_t fileposition);
 		size_t				read (void * target, size_t bytes);
 		size_t				read (ByteArray &target, size_t bytes);
-		ppluint64			copyFrom (FileObject &quellfile, ppluint64 quelloffset, ppluint64 bytes, ppluint64 zieloffset);
-		ppluint64			copyFrom (FileObject &quellfile, ppluint64 bytes);
+		uint64_t			copyFrom (FileObject &quellfile, uint64_t quelloffset, uint64_t bytes, uint64_t zieloffset);
+		uint64_t			copyFrom (FileObject &quellfile, uint64_t bytes);
 		int					gets (String &buffer, size_t num=1024);
 		int					getws (String &buffer, size_t num=1024);
 		String				gets (size_t num=1024);
@@ -563,9 +565,9 @@ class FileObject
 
 		// Virtuelle Funktionen
 		virtual void		close ();
-		virtual void		seek (ppluint64 position);
-		virtual	ppluint64	seek (pplint64 offset, SeekOrigin origin);
-		virtual ppluint64	tell();
+		virtual void		seek (uint64_t position);
+		virtual	uint64_t	seek (int64_t offset, SeekOrigin origin);
+		virtual uint64_t	tell();
 		virtual void		rewind();
 		virtual size_t		fread(void * ptr, size_t size, size_t nmemb);
 		virtual size_t		fwrite(const void * ptr, size_t size, size_t nmemb);
@@ -578,15 +580,15 @@ class FileObject
 		virtual	void		fputwc (wchar_t c);
 		virtual	wchar_t		fgetwc();
 		virtual bool		eof() const;
-		virtual ppluint64	size() const;
-		virtual const char	*map(ppluint64 position, size_t size);
-		virtual char		*mapRW(ppluint64 position, size_t size);
+		virtual uint64_t	size() const;
+		virtual const char	*map(uint64_t position, size_t size);
+		virtual char		*mapRW(uint64_t position, size_t size);
 		virtual	void		unmap();
 		virtual void		setMapReadAhead(size_t bytes);
 		virtual int			getFileNo() const;
 		virtual void		flush();
 		virtual void		sync();
-		virtual void		truncate(ppluint64 length);
+		virtual void		truncate(uint64_t length);
 		virtual bool		isOpen() const;
 		virtual void		lockShared(bool block=true);
 		virtual void		lockExclusive(bool block=true);
@@ -623,9 +625,9 @@ class MemFile : public FileObject
 		// Virtuelle Funktionen
 		virtual void		close();
 		virtual void		rewind();
-		virtual void		seek (ppluint64 position);
-		virtual	ppluint64	seek (pplint64 offset, SeekOrigin origin);
-		virtual ppluint64	tell();
+		virtual void		seek (uint64_t position);
+		virtual	uint64_t	seek (int64_t offset, SeekOrigin origin);
+		virtual uint64_t	tell();
 		virtual size_t		fread(void * ptr, size_t size, size_t nmemb);
 		virtual size_t		fwrite(const void * ptr, size_t size, size_t nmemb);
 		virtual char *		fgets (char *buffer, size_t num);
@@ -637,15 +639,15 @@ class MemFile : public FileObject
 		virtual void		fputs (const char *str);
 		virtual void		fputws (const wchar_t *str);
 		virtual bool		eof() const;
-		virtual ppluint64	size() const;
-		virtual const char	*map(ppluint64 position, size_t size);
-		virtual char		*mapRW(ppluint64 position, size_t size);
+		virtual uint64_t	size() const;
+		virtual const char	*map(uint64_t position, size_t size);
+		virtual char		*mapRW(uint64_t position, size_t size);
 		virtual	void		unmap();
 		virtual void		setMapReadAhead(size_t bytes);
 		virtual int			getFileNo() const;
 		virtual void		flush();
 		virtual void		sync();
-		virtual void		truncate(ppluint64 length);
+		virtual void		truncate(uint64_t length);
 		virtual bool		isOpen() const;
 		virtual void		lockShared(bool block=true);
 		virtual void		lockExclusive(bool block=true);
@@ -657,16 +659,16 @@ class File : public FileObject
 	private:
 		void * ff;
 		char * MapBase;
-		ppluint64	LastMapStart;
-		ppluint64	LastMapSize;
+		uint64_t	LastMapStart;
+		uint64_t	LastMapSize;
 		int			LastMapProtection;
-		ppluint64	ReadAhead;
-		ppluint64	mysize;
-		ppluint64	pos;
+		uint64_t	ReadAhead;
+		uint64_t	mysize;
+		uint64_t	pos;
 		bool isPopen;
 
 		int munmap(void *addr, size_t len);
-		void *mmap(ppluint64 position, size_t size, int prot, int flags);
+		void *mmap(uint64_t position, size_t size, int prot, int flags);
 
 
 
@@ -703,10 +705,10 @@ class File : public FileObject
 		// Virtuelle Funktionen
 		virtual void		close ();
 		virtual void		rewind();
-		virtual void		seek (ppluint64 position);
-		virtual	ppluint64	seek (pplint64 offset, SeekOrigin origin);
-		virtual ppluint64	tell();
-		virtual ppluint64	size() const;
+		virtual void		seek (uint64_t position);
+		virtual	uint64_t	seek (int64_t offset, SeekOrigin origin);
+		virtual uint64_t	tell();
+		virtual uint64_t	size() const;
 		virtual bool		isOpen() const;
 		virtual size_t		fread(void * ptr, size_t size, size_t nmemb);
 		virtual size_t		fwrite(const void * ptr, size_t size, size_t nmemb);
@@ -722,13 +724,13 @@ class File : public FileObject
 		virtual int			getFileNo() const;
 		virtual void		flush();
 		virtual void		sync();
-		virtual void		truncate(ppluint64 length);
+		virtual void		truncate(uint64_t length);
 		virtual void		lockShared(bool block=true);
 		virtual void		lockExclusive(bool block=true);
 		virtual void		unlock();
 		virtual void		setMapReadAhead(size_t bytes);
-		virtual const char	*map(ppluint64 position, size_t size);
-		virtual char		*mapRW(ppluint64 position, size_t size);
+		virtual const char	*map(uint64_t position, size_t size);
+		virtual char		*mapRW(uint64_t position, size_t size);
 		virtual	void		unmap();
 
 
@@ -736,7 +738,7 @@ class File : public FileObject
 		static void load(ByteArray &object, const String &filename);
 		static void load(String &object, const String &filename);
 		static void *load(const String &filename, size_t *size=NULL);
-		static void truncate(const String &filename, ppluint64 bytes);
+		static void truncate(const String &filename, uint64_t bytes);
 		static bool exists(const String &filename);
 		static void copy(const String &oldfile, const String &newfile);
 		static void move(const String &oldfile, const String &newfile);
@@ -782,9 +784,9 @@ class GzFile : public FileObject
 		// Virtuelle Funktionen
 		virtual void		close ();
 		virtual void		rewind();
-		virtual void		seek (ppluint64 position);
-		virtual	ppluint64	seek (pplint64 offset, SeekOrigin origin);
-		virtual ppluint64	tell();
+		virtual void		seek (uint64_t position);
+		virtual	uint64_t	seek (int64_t offset, SeekOrigin origin);
+		virtual uint64_t	tell();
 		virtual bool		eof() const;
 		virtual bool		isOpen() const;
 		virtual size_t		fread(void * ptr, size_t size, size_t nmemb);
@@ -805,13 +807,13 @@ class DirEntry
 		String		Filename;
 		String		Path;
 		String		File;
-		ppluint64	Size;
+		uint64_t	Size;
 		FileAttr::Attributes Attrib;
-		ppluint32	Uid;
-		ppluint32	Gid;
-		ppluint32	Blocks;
-		ppluint32	BlockSize;
-		ppluint32	NumLinks;
+		uint32_t	Uid;
+		uint32_t	Gid;
+		uint32_t	Blocks;
+		uint32_t	BlockSize;
+		uint32_t	NumLinks;
 		String		AttrStr;
 		DateTime	ATime, CTime, MTime;
 		bool		isDir();
@@ -988,7 +990,7 @@ class PFPFile
 	private:
 		List<PFPChunk*> Chunks;
 		String id;
-		ppluint8 mainversion, subversion;
+		uint8_t mainversion, subversion;
 		Compression::Algorithm comp;
 
 
@@ -1174,7 +1176,7 @@ class Logger
 		bool		logconsole;
 		bool		logThreadId;
 		int			rotate_mechanism;
-		ppluint64	maxsize;
+		uint64_t	maxsize;
 		int			generations;
 		bool		inrotate;
 		bool			useSyslog;
@@ -1199,7 +1201,7 @@ class Logger
 		void	setLogLevel(PRIORITY prio, int level=1);
 		int		getLogLevel(PRIORITY prio);
 		String	getLogfile(PRIORITY prio);
-		void	setLogRotate(ppluint64 maxsize, int generations);
+		void	setLogRotate(uint64_t maxsize, int generations);
 		void	enableConsole(bool flag=true, PRIORITY prio=Logger::DEBUG, int level=1);
 		void	openSyslog(const String &ident, SYSLOG_FACILITY facility=SYSLOG_USER);
 		void	closeSyslog();

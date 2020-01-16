@@ -32,7 +32,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  *******************************************************************************/
 
-#include "prolog.h"
+#include "prolog_ppl7.h"
 #ifndef _ISOC99_SOURCE
 #define _ISOC99_SOURCE
 #endif
@@ -414,13 +414,19 @@ bool WideString::notEmpty() const
 bool WideString::isNumeric() const
 {
 	if (!stringlen) return false;
+	size_t dotcount=0;
 	for (size_t i=0;i<stringlen;i++) {
 		wchar_t c=((wchar_t*)ptr)[i];
 		if (c<'0' || c>'9') {
 			if (c!='.' && c!=',' && c!='-') return false;
 			if (c=='-' && i>0) return false;
+			if (c=='.' || c==',') {
+				dotcount++;
+				if (dotcount>1) return false;
+			}
 		}
 	}
+	if(ptr[stringlen-1]=='.') return false;
 	return true;
 }
 
@@ -1431,16 +1437,16 @@ ByteArray WideString::toUCS4() const
 {
 	ByteArray ret;
 	if (stringlen) {
-		ppluint32 *ucs4=(ppluint32*)malloc(stringlen*4+4);
+		uint32_t *ucs4=(uint32_t*)malloc(stringlen*4+4);
 		if (!ucs4) throw OutOfMemoryException();
-		for (size_t i=0;i<stringlen;i++) ucs4[i]=(ppluint32)ptr[i];
+		for (size_t i=0;i<stringlen;i++) ucs4[i]=(uint32_t)ptr[i];
 		ucs4[stringlen]=0;
 		ret.useadr(ucs4,stringlen*4);
 	}
 	return ret;
 }
 
-WideString &WideString::fromUCS4(const ppluint32 *str, size_t size)
+WideString &WideString::fromUCS4(const uint32_t *str, size_t size)
 {
 	clear();
 	for (size_t i=0;str[i]!=0;i++) {
@@ -1453,7 +1459,7 @@ WideString &WideString::fromUCS4(const ppluint32 *str, size_t size)
 
 WideString &WideString::fromUCS4(const ByteArrayPtr &bin)
 {
-	return fromUCS4((ppluint32*)bin.ptr(),bin.size());
+	return fromUCS4((uint32_t*)bin.ptr(),bin.size());
 }
 
 
@@ -3028,27 +3034,27 @@ unsigned int WideString::toUnsignedInt() const
 	return wcstoul(ptr,NULL,10);
 }
 
-pplint64 WideString::toInt64() const
+int64_t WideString::toInt64() const
 {
 	if (!stringlen) return 0;
 #ifdef HAVE_WCSTOLL
-	return (pplint64) wcstoll(ptr,NULL,10);
+	return (int64_t) wcstoll(ptr,NULL,10);
 #elif defined WIN32
-	return (pplint64) _wcstoi64(ptr,NULL,10);
+	return (int64_t) _wcstoi64(ptr,NULL,10);
 #else
-	return (pplint64) pplwcstoll(ptr,NULL,10);
+	return (int64_t) pplwcstoll(ptr,NULL,10);
 #endif
 }
 
-ppluint64 WideString::toUnsignedInt64() const
+uint64_t WideString::toUnsignedInt64() const
 {
 	if (!stringlen) return 0;
 #ifdef HAVE_WCSTOULL
-	return (ppluint64) wcstoll(ptr,NULL,10);
+	return (uint64_t) wcstoll(ptr,NULL,10);
 #elif defined WIN32
-	return (ppluint64) _wcstoi64(ptr,NULL,10);
+	return (uint64_t) _wcstoi64(ptr,NULL,10);
 #else
-	return (ppluint64) pplwcstoll(ptr,NULL,10);
+	return (uint64_t) pplwcstoll(ptr,NULL,10);
 #endif
 
 }
