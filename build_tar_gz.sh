@@ -18,7 +18,7 @@ rm -rf distfiles build/dist
 create_dir distfiles
 create_dir build/dist
 
-tar -czf distfiles/udppingpong-$VERSION.tar.gz *.m4 autoconf include/sender.h \
+tar -czf distfiles/udppingpong-$VERSION-$RPM_RELEASE.tar.gz *.m4 autoconf include/sender.h \
 	include/sensor.h include/config.h.in src *.TXT configure Makefile.in README.md \
 	ppl7/src ppl7/Makefile.in ppl7/*.TXT \
 	ppl7/include/*.in ppl7/include/ppl7.h ppl7/include/compat_ppl7.h \
