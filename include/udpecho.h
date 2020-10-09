@@ -89,45 +89,6 @@ class UDPEchoReceiverThread : public ppl7::Thread
 
 };
 
-class UDPEchoSender
-{
-private:
-	ppl7::Array 		SourceIpList;
-	ppl7::ThreadPool	threadpool;
-	ppl7::String		Destination;
-	int					Packetsize;
-	int					Timeout;
-	size_t				ThreadCount;
-	int					Runtime;
-	float				Timeslice;
-	bool				ignoreResponses;
-	bool				verbose;
-
-	void prepareThreads();
-	void destroyThreads();
-
-public:
-	UDPEchoSender();
-	~UDPEchoSender();
-	void setDestination(const ppl7::String &destination);
-	void setRuntime(int sec);
-	void setTimeout(int sec);
-	void setThreads(size_t num);
-	void setPacketsize(int bytes);
-	void setIgnoreResponses(bool ignore);
-	void setTimeslice(float ms);
-	void setVerbose(bool verbose);
-	void addSourceIP(const ppl7::String &ip);
-	void addSourceIP(const ppl7::Array &ip_list);
-	void addSourceIP(const std::list<ppl7::String> &ip_list);
-	void clearSourceIPs();
-	void start(int queryrate);
-	void stop();
-	bool isRunning();
-	UDPSenderResults getResults();
-};
-
-
 class UDPEchoSenderThread : public ppl7::Thread
 {
 	private:
