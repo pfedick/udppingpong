@@ -265,9 +265,6 @@ AC_CHECK_FUNCS([inet_ntop inet_pton inet_aton inet_ntoa inet_ntoa_r inet_addr in
 AC_CHECK_FUNCS([ioctl])
 AC_CHECK_FUNCS([signal syslog openlog closelog])
 
-#AC_CHECK_FUNCS([pthread_set_name_np pthread_setname_np])
-#AC_CHECK_DECLS([pthread_set_name_np pthread_setname_np], [], [], [[#include <pthreads.h>]])
-
 AC_CHECK_LIB(pthread, pthread_set_name_np,
 	AC_DEFINE(HAVE_PTHREAD_SET_NAME_NP,1),,)
 AC_CHECK_LIB(pthread, pthread_setname_np,
