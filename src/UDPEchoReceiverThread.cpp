@@ -100,6 +100,7 @@ void UDPEchoReceiverThread::countPacket(const PACKET *p, ssize_t bytes)
  */
 void UDPEchoReceiverThread::run()
 {
+	threadSetName("UDPEchoReceiverThread");
 	struct timespec timeout;
 	timeout.tv_sec=0;
 	timeout.tv_nsec=10*1000000;

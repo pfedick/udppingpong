@@ -472,6 +472,17 @@ Thread::~Thread()
 #endif
 }
 
+
+void Thread::threadSetName(const char *name)
+{
+	THREADDATA *t=(THREADDATA *)threaddata;
+	if (!t) return;
+	#ifdef HAVE_PTHREADS
+		pthread_setname_np(t->thread,name);
+	#endif
+}
+
+
 /*! \brief Der Thread wird gestoppt
  *
  * Dem Thread wird zunächst signalisiert, dass er stoppen soll. Anschließend wartet die

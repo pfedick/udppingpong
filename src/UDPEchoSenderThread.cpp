@@ -342,6 +342,7 @@ void UDPEchoSenderThread::sendPacket()
  */
 void UDPEchoSenderThread::run()
 {
+	threadSetName("UDPEchoSenderThread");
 	buffer=ppl7::Random(packetsize);
 	receiver.setSocketDescriptor(sockfd);
 	receiver.resetCounter();

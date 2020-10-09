@@ -428,6 +428,7 @@ class Thread
 
 		Thread();
 		virtual ~Thread();
+		void	threadSetName(const char *name);
 		void	threadSuspend();
 		void	threadResume();
 		void	threadStop();
