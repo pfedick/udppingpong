@@ -472,9 +472,11 @@ void UDPEchoSenderThread::runWithRateLimit()
 			//printf ("Zeitscheiben rest: %llu\n", z);
 		}
 	}
+	/*
 	if (verbose) {
 		printf ("total idle: %0.6f\n",total_idle);
 	}
+	*/
 }
 
 

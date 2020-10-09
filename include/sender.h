@@ -68,6 +68,8 @@ class UDPSender
 		void readSourceIPList(const ppl7::String &filename);
 		ppl7::SockAddr getSockAddr(const ppl7::String &Hostname, int Port);
 
+		UDPEchoCounter getCounter();
+
 	public:
 		UDPSender();
 		void help();

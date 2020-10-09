@@ -27,6 +27,7 @@
 #include <string.h>
 
 #include "sender.h"
+#include "sensor.h"
 #include <set>
 
 /*!@file
@@ -262,7 +263,7 @@ void UDPSender::prepareThreads()
 		thread->setTimeout(Timeout);
 		thread->setZeitscheibe(Zeitscheibe);
 		thread->setIgnoreResponses(ignoreResponses);
-		thread->setVerbose(true);
+		thread->setVerbose(false);
 		thread->setAlwaysRandomize(alwaysRandomize);
 		if (SourceIpList.size()>0) {
 			thread->setSourceIP(SourceIpList[si]);
@@ -313,6 +314,15 @@ void UDPSender::run(int queryrate)
 
 	printf ("# Start Session with Packetsize: %d, Threads: %d, Queryrate: %d\n",
 			Packetsize, ThreadCount,queryrate);
+	SystemStat stat_start;
+	SystemStat stat_end;
+	sampleSensorData(stat_start);
+	double start = ppl7::GetMicrotime();
+	double end = start + 1;
+
+	UDPEchoCounter previous_counter;
+	previous_counter.clear();
+
 	ppl7::ThreadPool::iterator it;
 	for (it=threadpool.begin();it!=threadpool.end();++it) {
 		((UDPEchoSenderThread*)(*it))->setQueryRate(queryrate/ThreadCount);
@@ -321,11 +331,47 @@ void UDPSender::run(int queryrate)
 	ppl7::MSleep(500);
 	while (threadpool.running()==true && stopFlag==false) {
 		ppl7::MSleep(100);
+		if (ppl7::GetMicrotime() >= end) {
+			sampleSensorData(stat_end);
+			UDPEchoCounter counter=getCounter();
+
+			printf("APP Packets TX: %8lu, RX: %8lu || NetIF TX: %8lu, RX: %8lu, ERR: %8lu, DROP: %8lu, MB TX: %4lu, RX: %4lu || CPU: %0.2f\n",
+					counter.packets_send-previous_counter.packets_send,
+					counter.packets_received-previous_counter.packets_received,
+					stat_end.net_total.transmit.packets-stat_start.net_total.transmit.packets,
+					stat_end.net_total.receive.packets-stat_start.net_total.receive.packets,
+					stat_end.net_total.receive.errs-stat_start.net_total.receive.errs,
+					stat_end.net_total.receive.drop-stat_start.net_total.receive.drop,
+					(stat_end.net_total.transmit.bytes-stat_start.net_total.transmit.bytes)/1024/1024,
+					(stat_end.net_total.receive.bytes-stat_start.net_total.receive.bytes)/1024/1024,
+					SystemStat::Cpu::getUsage(stat_end.cpu, stat_start.cpu)
+					);
+
+			stat_start=stat_end;
+			previous_counter=counter;
+			end += 1.0;
+		}
 	}
 	if (stopFlag==true) {
 		threadpool.stopThreads();
 		throw ppl7::OperationInterruptedException("Lasttest wurde abgebrochen");
 	}
+}
+
+
+UDPEchoCounter UDPSender::getCounter()
+{
+	UDPEchoCounter counter;
+	counter.clear();
+	counter.sampleTime=ppl7::GetMicrotime();
+	ppl7::ThreadPool::iterator it;
+	for (it=threadpool.begin();it!=threadpool.end();++it) {
+		counter.packets_send+=((UDPEchoSenderThread*)(*it))->getPacketsSend();
+		counter.packets_received+=((UDPEchoSenderThread*)(*it))->getPacketsReceived();
+		//counter.bytes_send+=((UDPEchoSenderThread*)(*it))->getBytesSend();
+		//counter.bytes_received+=((UDPEchoSenderThread*)(*it))->getBytesReceived();
+	}
+	return counter;
 }
 
 /*!\brief Ergebnisse sammeln und berechnen
