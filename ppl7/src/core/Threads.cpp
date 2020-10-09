@@ -46,8 +46,11 @@
 #include <stdarg.h>
 #endif
 
-#ifdef HAVE_PTHREADS
+#ifdef HAVE_PTHREAD_H
 	#include <pthread.h>
+#endif
+#ifdef HAVE_PTHREAD_NP_H
+	#include <pthread_np.h>
 #endif
 
 #ifdef HAVE_LIMITS_H
