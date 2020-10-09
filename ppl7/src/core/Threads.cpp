@@ -478,7 +478,11 @@ void Thread::threadSetName(const char *name)
 	THREADDATA *t=(THREADDATA *)threaddata;
 	if (!t) return;
 	#ifdef HAVE_PTHREADS
+#ifdef HAVE_PTHREAD_SET_NAME_NP
+		pthread_set_name_np(t->thread,name);
+#elif defined HAVE_PTHREAD_SETNAME_NP
 		pthread_setname_np(t->thread,name);
+#endif
 	#endif
 }
 
