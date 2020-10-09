@@ -142,8 +142,8 @@ void UDPEchoSenderThread::connect(const ppl7::String &hostname, int port)
 	int e = 0, conres = 0;
 	do {
 		conres = ::connect(sockfd, res->ai_addr, res->ai_addrlen);
-		ppl7::SockAddr current_addr=ppl7::SockAddr((const void*)res->ai_addr,(size_t)res->ai_addrlen);
-		printf("connecting to %s, conres=%d\n",(const char*)current_addr.toIPAddress().toString(), conres);
+		//ppl7::SockAddr current_addr=ppl7::SockAddr((const void*)res->ai_addr,(size_t)res->ai_addrlen);
+		//printf("connecting to %s, conres=%d\n",(const char*)current_addr.toIPAddress().toString(), conres);
 		e = errno;
 		if (conres == 0) break;
 	} while ((res = res->ai_next) != NULL);
