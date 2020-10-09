@@ -125,7 +125,6 @@ void UDPEchoSender::prepareThreads()
 	ppl7::ThreadPool::iterator it;
 	for (it=threadpool.begin();it!=threadpool.end();++it) {
 		UDPEchoSenderThread *thread=(UDPEchoSenderThread*)(*it);
-		thread->setDestination(Destination);
 		thread->setPacketsize(Packetsize);
 		thread->setRuntime(Runtime);
 		thread->setTimeout(Timeout);
@@ -137,6 +136,7 @@ void UDPEchoSender::prepareThreads()
 			si++;
 			if (si>=SourceIpList.size()) si=0;
 		}
+		thread->connect(Destination);
 	}
 }
 

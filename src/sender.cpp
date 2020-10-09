@@ -221,7 +221,7 @@ int UDPSender::main(int argc, char**argv)
 			saveResultsToCsv(results);
 		}
 		threadpool.destroyAllThreads();
-	} catch (ppl7::OperationInterruptedException) {
+	} catch (ppl7::OperationInterruptedException &) {
 		getResults(results);
 		presentResults(results);
 		saveResultsToCsv(results);
@@ -242,7 +242,7 @@ void UDPSender::readSourceIPList(const ppl7::String &filename)
 			if (ip.notEmpty()==true && ip[0]!='#')
 				SourceIpList.add(ip);
 		}
-	} catch (ppl7::EndOfFileException) {
+	} catch (ppl7::EndOfFileException &) {
 
 	}
 }
@@ -257,7 +257,6 @@ void UDPSender::prepareThreads()
 	size_t si=0;
 	for (int i=0;i<ThreadCount;i++) {
 		UDPEchoSenderThread *thread=new UDPEchoSenderThread();
-		thread->setDestination(Ziel);
 		thread->setPacketsize(Packetsize);
 		thread->setRuntime(Laufzeit);
 		thread->setTimeout(Timeout);
@@ -270,6 +269,7 @@ void UDPSender::prepareThreads()
 			si++;
 			if (si>=SourceIpList.size()) si=0;
 		}
+		thread->connect(Ziel);
 		threadpool.addThread(thread);
 	}
 }

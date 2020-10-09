@@ -19,12 +19,17 @@
 
 #include <ppl7.h>
 #include <ppl7-inet.h>
+#include <string.h>
+#include <sys/time.h>
 #include <sys/types.h>
+#include <unistd.h>
 #include <sys/socket.h>
 #include <time.h>
-#include <sys/time.h>
 #include <errno.h>
-
+#include <netinet/in.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#include <fcntl.h>
 #include "udpecho.h"
 
 
@@ -68,6 +73,20 @@ UDPEchoSenderThread::UDPEchoSenderThread()
 	for (int i=0;i<255;i++) counter_errorcodes[i]=0;
 	verbose=false;
 	alwaysRandomize=false;
+	queryrate=0;
+	Zeitscheibe=0.0f;
+	sockfd=::socket(AF_INET, SOCK_DGRAM, 0);
+	if (!sockfd) throw ppl7::CouldNotOpenSocketException("Could not create Socket");
+	const int trueValue = 1;
+	// Wir erlauben anderen Threads/Programmen sich auf das gleichen Socket zu binden
+	setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &trueValue, sizeof(trueValue));
+	#ifdef SO_REUSEPORT_LB
+		setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT_LB, &trueValue, sizeof(trueValue));
+		//setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &trueValue, sizeof(trueValue));
+	#else
+		setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &trueValue, sizeof(trueValue));
+	#endif
+
 }
 
 /*!\brief Destruktor
@@ -77,17 +96,74 @@ UDPEchoSenderThread::UDPEchoSenderThread()
 UDPEchoSenderThread::~UDPEchoSenderThread()
 {
 	receiver.threadStop();
-	Socket.disconnect();
+	if (sockfd) ::close(sockfd);
 }
-
 
 /*!\brief Zieladresse setzen
  *
  * @param destination String mit Zieladresse und Port
  */
-void UDPEchoSenderThread::setDestination(const ppl7::String &destination)
+void UDPEchoSenderThread::connect(const ppl7::String &destination)
 {
-	this->destination=destination;
+	if (destination.isEmpty())
+		throw ppl7::IllegalArgumentException("UDPEchoSenderThread::connect(const String &destination)");
+	ppl7::Array hostname = StrTok(destination, ":");
+	if (hostname.size() != 2)
+		throw ppl7::IllegalArgumentException("UDPEchoSenderThread::connect(const String &destination)");
+	ppl7::String portname = hostname.get(1);
+	int port = portname.toInt();
+	if (port <= 0 && portname.size() > 0) {
+		// Vielleicht wurde ein Service-Namen angegeben?
+		struct servent *s = getservbyname((const char*) portname, "udp");
+		if (s) {
+			unsigned short int p = s->s_port;
+			port = (int) ntohs(p);
+		} else {
+			throw ppl7::IllegalPortException("UDPEchoSenderThread::connect(const String &destination=%s)", (const char*) destination);
+		}
+	}
+	if (port <= 0)
+		throw ppl7::IllegalPortException("UDPEchoSenderThread::connect(const String &destination=%s)", (const char*) destination);
+	connect(hostname.get(0), port);
+}
+
+void UDPEchoSenderThread::connect(const ppl7::String &hostname, int port)
+{
+	struct addrinfo hints, *res, *ressave;
+	bzero(&hints, sizeof(struct addrinfo));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_DGRAM;
+	char portstr[10];
+	sprintf(portstr, "%i", port);
+	int n=0;
+	if ((n=getaddrinfo((const char*) hostname, portstr, &hints, &res)) != 0)
+		throwExceptionFromEaiError(n, ppl7::ToString("UDPEchoSenderThread::connect: host=%s, port=%i", (const char*) hostname, port));
+	ressave = res;
+	int e = 0, conres = 0;
+	do {
+		conres = ::connect(sockfd, res->ai_addr, res->ai_addrlen);
+		ppl7::SockAddr current_addr=ppl7::SockAddr((const void*)res->ai_addr,(size_t)res->ai_addrlen);
+		printf("connecting to %s, conres=%d\n",(const char*)current_addr.toIPAddress().toString(), conres);
+		e = errno;
+		if (conres == 0) break;
+	} while ((res = res->ai_next) != NULL);
+	freeaddrinfo(ressave);
+	if (conres !=0 || res==NULL) {
+		ppl7::throwSocketException(e, ppl7::ToString("Host: %s, Port: %d", (const char*) hostname, port));
+	}
+
+	// Der Socket soll nicht blockieren, wenn keine Daten anstehen
+	fcntl(sockfd,F_SETFL,fcntl(sockfd,F_GETFL,0)|O_NONBLOCK);
+	int optval = 1;
+	//setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
+	socklen_t size=sizeof(optval);
+	if (getsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &optval, &size) < 0) {
+		ppl7::throwSocketException(errno, ppl7::ToString("getsockopt failed on Host: %s, Port: %d", (const char*) hostname, port));
+	}
+	size = optval * 2;
+	if (setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &size, sizeof(size))!=0) {
+		ppl7::throwSocketException(errno, ppl7::ToString("setsockopt failed on Host: %s, Port: %d", (const char*) hostname, port));
+	}
 }
 
 /*!\brief Paketgröße setzen
@@ -168,9 +244,35 @@ void UDPEchoSenderThread::setIgnoreResponses(bool flag)
 	ignoreResponses=flag;
 }
 
+static ppl7::SockAddr getSockAddr(const ppl7::String &Hostname, int Port)
+{
+	std::list<ppl7::IPAddress> result;
+	size_t hostcount=ppl7::GetHostByName(Hostname, result);
+	if (hostcount<1) {
+		throw ppl7::HostNotFoundException("Hostname nicht aufloesbar [%s]",(const char*)Hostname);
+	} else if (hostcount>1) {
+		throw ppl7::ResolverException("ERROR: Hostname nicht eindeutig, er loest mit %td IP-Adressen auf\n",hostcount);
+	}
+	ppl7::IPAddress &address=result.front();
+	return ppl7::SockAddr(address,Port);
+}
+
+
+
 void UDPEchoSenderThread::setSourceIP(const ppl7::String &ip)
 {
-	Socket.setSource(ip);
+	ppl7::SockAddr sockaddr=::getSockAddr(ip,0);
+	struct sockaddr_in servaddr;
+	memset(&servaddr,0,sizeof(servaddr));
+	memcpy(&servaddr,sockaddr.addr(),sockaddr.size());
+		// Socket an die IP-Adresse und den Port binden
+	if (0 != ::bind(sockfd,(const struct sockaddr *)&servaddr, sizeof(servaddr))) {
+		int e=errno;
+		throw ppl7::CouldNotBindToInterfaceException("%s:%d, %s",
+				(const char*)sockaddr.toIPAddress().toString(),
+				sockaddr.port(),
+				strerror(e));
+	}
 }
 
 void UDPEchoSenderThread::setVerbose(bool verbose)
@@ -241,9 +343,6 @@ void UDPEchoSenderThread::sendPacket()
 void UDPEchoSenderThread::run()
 {
 	buffer=ppl7::Random(packetsize);
-	Socket.connect(destination);
-	Socket.setBlocking(false);
-	sockfd=Socket.getDescriptor();
 	receiver.setSocketDescriptor(sockfd);
 	receiver.resetCounter();
 	if (!ignoreResponses)
@@ -262,7 +361,7 @@ void UDPEchoSenderThread::run()
 	duration=ppl7::GetMicrotime()-start;
 	waitForTimeout();
 	receiver.threadStop();
-	Socket.disconnect();
+	close(sockfd);
 }
 
 /*!\brief Generiert und empfängt soviele Pakete wie möglich
@@ -301,6 +400,18 @@ static inline double getNsec()
 	return (double)ts.tv_sec+((double)ts.tv_nsec/1000000000.0);
 }
 
+ppl7::SockAddr UDPEchoSenderThread::getSockAddr() const
+{
+	if (!sockfd)
+		throw ppl7::NotConnectedException();
+	struct sockaddr addr;
+	socklen_t len=sizeof(addr);
+	int ret=getsockname(sockfd, &addr, &len);
+	if (ret<0) ppl7::throwSocketException(errno, "UDPEchoSenderThread::getSockAddr");
+	return ppl7::SockAddr((const void*)&addr,(size_t)len);
+}
+
+
 /*!\brief Generiert eine gewünschte Anzahl Pakete pro Sekunde
  *
  * In einer Endlosschleife werden Pakete generiert und versendet.
@@ -320,7 +431,7 @@ void UDPEchoSenderThread::runWithRateLimit()
 	struct timespec ts;
 	int64_t total_zeitscheiben=runtime*1000/(Zeitscheibe*1000.0);
 	int64_t queries_rest=runtime*queryrate;
-	ppl7::SockAddr addr=Socket.getSockAddr();
+	ppl7::SockAddr addr=getSockAddr();
 	if (verbose) {
 		printf ("Laufzeit: %d s, Dauer Zeitscheibe: %0.6f s, Zeitscheiben total: %lu, Qpzs: %lu, Source: %s:%d\n",
 				runtime,Zeitscheibe,total_zeitscheiben,

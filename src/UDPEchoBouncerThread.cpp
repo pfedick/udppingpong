@@ -76,6 +76,7 @@ UDPEchoBouncerThread::UDPEchoBouncerThread()
  */
 UDPEchoBouncerThread::~UDPEchoBouncerThread()
 {
+	if (sockfd) ::close(sockfd);
 }
 
 /*!\brief Pakete nicht beantworten
@@ -105,16 +106,46 @@ void UDPEchoBouncerThread::setPacketSize(size_t bytes)
 
 
 
-/*!\brief Socket Deskriptor setzen
- *
- * Übermittelt den Deskriptor eines bereits angelegten Sockets an den Worker-Thread.
- *
- * @param sockfd Socket Deskriptor
- */
-void UDPEchoBouncerThread::setSocketDescriptor(int sockfd)
+void UDPEchoBouncerThread::bind(const ppl7::SockAddr &sockaddr)
 {
-	this->sockfd=sockfd;
+	if (sockfd) ::close(sockfd);
+	sockfd=::socket(AF_INET, SOCK_DGRAM, 0);
+	if (!sockfd) throw ppl7::CouldNotOpenSocketException("Could not create Socket");
+	const int trueValue = 1;
+	// Wir erlauben anderen Threads/Programmen sich auf das gleichen Socket zu binden
+	setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &trueValue, sizeof(trueValue));
+#ifdef SO_REUSEPORT_LB
+	setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT_LB, &trueValue, sizeof(trueValue));
+#else
+	setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &trueValue, sizeof(trueValue));
+#endif
+
+	memset(&servaddr,0,sizeof(servaddr));
+	memcpy(&servaddr,sockaddr.addr(),sockaddr.size());
+	// Socket an die IP-Adresse und den Port binden
+	if (0 != ::bind(sockfd,(const struct sockaddr *)&servaddr, sizeof(servaddr))) {
+		int e=errno;
+		throw ppl7::CouldNotBindToInterfaceException("%s:%d, %s",
+				(const char*)sockaddr.toIPAddress().toString(),
+				sockaddr.port(),
+				strerror(e));
+	}
+	// Der Socket soll nicht blockieren, wenn keine Daten anstehen
+	fcntl(sockfd,F_SETFL,fcntl(sockfd,F_GETFL,0)|O_NONBLOCK);
+	int optval = 1;
+	//setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
+	socklen_t size=sizeof(optval);
+	if (getsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &optval, &size) < 0) {
+		throw ppl7::CouldNotBindToInterfaceException("%s:%d, %s",
+						(const char*)sockaddr.toIPAddress().toString(),
+						sockaddr.port(),
+						strerror(errno));
+	}
+	size = optval * 2;
+	setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &size, sizeof(size));
 }
+
+
 
 
 /*!\brief Aktuelle Zähler auslesen und auf 0 setzen
@@ -162,7 +193,7 @@ void UDPEchoBouncerThread::run()
 	struct sockaddr_in cliaddr;
 	time_t start = time(NULL);
 	time_t next_check = start +1;
-	int socksend=::dup(sockfd);
+	//int socksend=::dup(sockfd);
 	while (1) {
 		socklen_t clilen = sizeof(cliaddr);
 		ssize_t n = ::recvfrom(sockfd, pBuffer, 4096, 0, (struct sockaddr*) (&cliaddr), &clilen);
@@ -172,21 +203,22 @@ void UDPEchoBouncerThread::run()
 			if (!noEcho) {
 				if (!packetSize) {
 					bytes_send+=n;
-					::sendto(socksend, (void*) pBuffer, n, 0, (struct sockaddr*) (&cliaddr), clilen);
+					::sendto(sockfd, (void*) pBuffer, n, 0, (struct sockaddr*) (&cliaddr), clilen);
 				} else {
 					bytes_send=packetSize;
-					::sendto(socksend, (void*) pBuffer, packetSize, 0, (struct sockaddr*) (&cliaddr), clilen);
+					::sendto(sockfd, (void*) pBuffer, packetSize, 0, (struct sockaddr*) (&cliaddr), clilen);
 				}
 			}
-			mutex.lock();
+			//mutex.lock();
 			counter.bytes_send+=n;
 			if (!noEcho) counter.packets_send++;
 			counter.bytes_received+=n;
 			counter.packets_received++;
-			mutex.unlock();
+			//mutex.unlock();
 		} else {
 			waitForSocketReadable();
 		}
+
 		if (time(NULL) >= next_check) {
 			next_check += 1;
 			if (this->threadShouldStop())
@@ -194,5 +226,5 @@ void UDPEchoBouncerThread::run()
 
 		}
 	}
-	::close(socksend);
+	//::close(socksend);
 }

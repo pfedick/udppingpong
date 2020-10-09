@@ -118,7 +118,6 @@ void UDPEchoBouncer::bind(const ppl7::SockAddr &sockaddr)
 	fcntl(sockfd,F_SETFL,fcntl(sockfd,F_GETFL,0)|O_NONBLOCK);
 	int optval = 1;
 	setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
-
 }
 
 
@@ -129,12 +128,12 @@ void UDPEchoBouncer::bind(const ppl7::SockAddr &sockaddr)
  *
  * @param ThreadCount Anzahl Worker-Threads
  */
-void UDPEchoBouncer::startBouncerThreads(size_t ThreadCount)
+void UDPEchoBouncer::startBouncerThreads(size_t ThreadCount, const ppl7::SockAddr &sockaddr)
 {
 	for (size_t i = 0; i < ThreadCount; i++) {
 		UDPEchoBouncerThread* thread = new UDPEchoBouncerThread();
 		thread->setNoEcho(noEcho);
-		thread->setSocketDescriptor(sockfd);
+		thread->bind(sockaddr);
 		thread->setPacketSize(packetSize);
 		threadpool.addThread(thread);
 	}
@@ -199,8 +198,8 @@ void UDPEchoBouncer::start(size_t num_threads)
 	if (!num_threads) num_threads=1;
 	//clearStats();
 	createSocket();
-	bind(sockaddr);
-	startBouncerThreads(num_threads);
+	//bind(sockaddr);
+	startBouncerThreads(num_threads, sockaddr);
 	//this->threadStart();
 	running=true;
 }

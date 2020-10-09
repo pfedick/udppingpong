@@ -66,6 +66,7 @@ class UDPSender
 		void getResults(UDPSender::Results &result);
 		ppl7::Array getQueryRates(const ppl7::String &QueryRates);
 		void readSourceIPList(const ppl7::String &filename);
+		ppl7::SockAddr getSockAddr(const ppl7::String &Hostname, int Port);
 
 	public:
 		UDPSender();

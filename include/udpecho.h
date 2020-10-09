@@ -132,10 +132,8 @@ class UDPEchoSenderThread : public ppl7::Thread
 {
 	private:
 		ppl7::ByteArray buffer;
-		ppl7::UDPSocket Socket;
 		UDPEchoReceiverThread receiver;
 
-		ppl7::String destination;
 		size_t packetsize;
 		int64_t queryrate;
 		int64_t counter_send, errors, counter_0bytes;
@@ -160,7 +158,9 @@ class UDPEchoSenderThread : public ppl7::Thread
 	public:
 		UDPEchoSenderThread();
 		~UDPEchoSenderThread();
-		void setDestination(const ppl7::String &destination);
+		void connect(const ppl7::String &destination);
+		void connect(const ppl7::String &hostname, int port);
+		ppl7::SockAddr getSockAddr() const;
 		void setPacketsize(size_t size);
 		void setRuntime(int seconds);
 		void setTimeout(int seconds);
@@ -196,7 +196,7 @@ class UDPEchoBouncer
 		bool noEcho;
 		bool running;
 		ppl7::SockAddr getSockAddr(const ppl7::String &Hostname, int Port);
-		void startBouncerThreads(size_t ThreadCount);
+		void startBouncerThreads(size_t ThreadCount, const ppl7::SockAddr &sockaddr);
 		void bind(const ppl7::SockAddr &sockaddr);
 		void createSocket();
 
@@ -224,6 +224,7 @@ class UDPEchoBouncerThread : public ppl7::Thread
 		};
 	private:
 		int sockfd;
+		struct sockaddr_in servaddr;
 		ppl7::SockAddr out_addr;
 		ppl7::ByteArray buffer;
 		void *pBuffer;
@@ -239,7 +240,8 @@ class UDPEchoBouncerThread : public ppl7::Thread
 		~UDPEchoBouncerThread();
 		void setNoEcho(bool flag);
 		void setPacketSize(size_t bytes);
-		void setSocketDescriptor(int sockfd);
+		void bind(const ppl7::SockAddr &sockaddr);
+		//void setSocketDescriptor(int sockfd);
 		void setSocketAddr(const ppl7::SockAddr &adr);
 		void run();
 		UDPEchoCounter getAndClearCounter();
