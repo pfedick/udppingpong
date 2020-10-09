@@ -361,7 +361,7 @@ void UDPEchoSenderThread::run()
 	duration=ppl7::GetMicrotime()-start;
 	waitForTimeout();
 	receiver.threadStop();
-	close(sockfd);
+	//close(sockfd);
 }
 
 /*!\brief Generiert und empfängt soviele Pakete wie möglich
