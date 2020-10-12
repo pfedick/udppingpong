@@ -90,11 +90,18 @@ void run(UDPEchoBouncer &bouncer, bool quiet)
 			if (ppl7::GetMicrotime() >= end) {
 				UDPEchoCounter counter=bouncer.getCounter();
 				sampleSensorData(stat_end);
-				printf("Packets per second: %10lu, Durchsatz: %10lu Mbit, RX: %8lu, TX: %8lu\n",
-						counter.packets_received, counter.bytes_received*8/(1024*1024),
-						stat_end.net_total.receive.packets-stat_start.net_total.receive.packets,
-						stat_end.net_total.transmit.packets-stat_start.net_total.transmit.packets
-						);
+				printf("APP PKT RX: %8lu, TX: %8lu || NetIF RX: %8lu, TX: %8lu, ER: %8lu, DR: %8lu, MBit RX: %4lu, TX: %4lu || CPU: %0.2f\n",
+									counter.packets_received, counter.packets_send,
+									stat_end.net_total.receive.packets-stat_start.net_total.receive.packets,
+									stat_end.net_total.transmit.packets-stat_start.net_total.transmit.packets,
+									stat_end.net_total.receive.errs-stat_start.net_total.receive.errs +
+									stat_end.net_total.transmit.errs-stat_start.net_total.transmit.errs,
+									stat_end.net_total.receive.drop-stat_start.net_total.receive.drop+
+									stat_end.net_total.receive.drop-stat_start.net_total.receive.drop,
+									(stat_end.net_total.receive.bytes-stat_start.net_total.receive.bytes)>>17,
+									(stat_end.net_total.transmit.bytes-stat_start.net_total.transmit.bytes)>>17,
+									SystemStat::Cpu::getUsage(stat_end.cpu, stat_start.cpu)
+				);
 				stat_start=stat_end;
 				end += 1.0;
 			}

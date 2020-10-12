@@ -340,8 +340,10 @@ void UDPSender::run(int queryrate)
 					counter.packets_received-previous_counter.packets_received,
 					stat_end.net_total.transmit.packets-stat_start.net_total.transmit.packets,
 					stat_end.net_total.receive.packets-stat_start.net_total.receive.packets,
-					stat_end.net_total.receive.errs-stat_start.net_total.receive.errs,
-					stat_end.net_total.receive.drop-stat_start.net_total.receive.drop,
+					stat_end.net_total.receive.errs-stat_start.net_total.receive.errs +
+					stat_end.net_total.transmit.errs-stat_start.net_total.transmit.errs,
+					stat_end.net_total.receive.drop-stat_start.net_total.receive.drop +
+					stat_end.net_total.transmit.drop-stat_start.net_total.transmit.drop,
 					(stat_end.net_total.transmit.bytes-stat_start.net_total.transmit.bytes)>>17,
 					(stat_end.net_total.receive.bytes-stat_start.net_total.receive.bytes)>>17,
 					SystemStat::Cpu::getUsage(stat_end.cpu, stat_start.cpu)
