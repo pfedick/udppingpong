@@ -324,8 +324,13 @@ void UDPSender::run(int queryrate)
 	previous_counter.clear();
 
 	ppl7::ThreadPool::iterator it;
+	int queries_rest=queryrate;
+	int threads_rest=threadpool.count();
 	for (it=threadpool.begin();it!=threadpool.end();++it) {
-		((UDPEchoSenderThread*)(*it))->setQueryRate(queryrate/ThreadCount);
+		int queries_thread=queries_rest/threads_rest;
+		threads_rest--;
+		queries_rest-=queries_thread;
+		((UDPEchoSenderThread*)(*it))->setQueryRate(queries_thread);
 	}
 	threadpool.startThreads();
 	ppl7::MSleep(500);
