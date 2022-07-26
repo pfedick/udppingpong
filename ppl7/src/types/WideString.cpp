@@ -544,6 +544,7 @@ WideString & WideString::set(const char *str, size_t size)
 		GlobalEncoding="WINDOWS-1252";
 	}
 #endif
+#ifndef WIN32
 #ifdef HAVE_MBSTOWCS
 	if (GlobalEncoding.instrCase("UTF-8")>=0
 			|| GlobalEncoding.instrCase("UTF8")>=0
@@ -558,6 +559,7 @@ WideString & WideString::set(const char *str, size_t size)
 		if (ret==(size_t) -1) {
 			((wchar_t*)ptr)[0]=0;
 			stringlen=0;
+			//printf ("BAENG!\n");
 			throw CharacterEncodingException();
 		}
 		((wchar_t*)ptr)[ret]=0;
@@ -565,11 +567,12 @@ WideString & WideString::set(const char *str, size_t size)
 		return *this;
 	}
 #endif
+#endif
 #ifdef HAVE_ICONV
 	//printf ("DEBUG: ICONV: %s\n",(const char*)GlobalEncoding);
 	iconv_t iconvimport=iconv_open(ICONV_UNICODE,(const char*)GlobalEncoding);
 	if ((iconv_t)(-1)==iconvimport) {
-		printf ("MIST\n");
+		//printf ("MIST\n");
 		throw UnsupportedCharacterEncodingException(GlobalEncoding);
 	}
 	char *outbuf=(char*)ptr;
@@ -581,6 +584,7 @@ WideString & WideString::set(const char *str, size_t size)
 		((wchar_t*)ptr)[0]=0;
 		stringlen=0;
 		//SetError(289,"%s",strerror(errno));
+		//printf ("BAENG!\n");
 		throw CharacterEncodingException();
 	}
 	((wchar_t*)outbuf)[0]=0;
@@ -804,9 +808,9 @@ WideString & WideString::setf(const char *fmt, ...)
 	va_start(args, fmt);
 	char *buff=NULL;
 #ifdef HAVE_VASPRINTF
-	if (::vasprintf (&buff, (char*)fmt, args)>0 && buff!=NULL) {
+	if (::vasprintf (&buff, (char*)fmt, args)>=0 && buff!=NULL) {
 #else
-	if (compat::vasprintf (&buff, (char*)fmt, args)>0 && buff!=NULL) {
+	if (compat::vasprintf (&buff, (char*)fmt, args)>=0 && buff!=NULL) {
 #endif
 		try {
 			set(buff);
@@ -867,9 +871,9 @@ WideString & WideString::vasprintf(const char *fmt, va_list args)
 {
 	char *buff=NULL;
 #ifdef HAVE_VASPRINTF
-	if (::vasprintf (&buff, (char*)fmt, args)>0 && buff!=NULL) {
+	if (::vasprintf (&buff, (char*)fmt, args)>=0 && buff!=NULL) {
 #else
-	if (compat::vasprintf (&buff, (char*)fmt, args)>0 && buff!=NULL) {
+	if (compat::vasprintf (&buff, (char*)fmt, args)>=0 && buff!=NULL) {
 #endif
 		try {
 			set(buff);
@@ -1053,9 +1057,9 @@ WideString & WideString::appendf(const char *fmt, ...)
 	va_start(args, fmt);
 	char *buff=NULL;
 #ifdef HAVE_VASPRINTF
-	if (::vasprintf (&buff, (const char*)fmt, args)>0 && buff!=NULL) {
+	if (::vasprintf (&buff, (const char*)fmt, args)>=0 && buff!=NULL) {
 #else
-	if (compat::vasprintf (&buff, (const char*)fmt, args)>0 && buff!=NULL) {
+	if (compat::vasprintf (&buff, (const char*)fmt, args)>=0 && buff!=NULL) {
 #endif
 		try {
 			WideString a;
@@ -1272,9 +1276,9 @@ WideString & WideString::prependf(const char *fmt, ...)
 	va_start(args, fmt);
 	char *buff=NULL;
 #ifdef HAVE_VASPRINTF
-	if (::vasprintf (&buff, (const char*)fmt, args)>0 && buff!=NULL) {
+	if (::vasprintf (&buff, (const char*)fmt, args)>=0 && buff!=NULL) {
 #else
-	if (compat::vasprintf (&buff, (const char*)fmt, args)>0 && buff!=NULL) {
+	if (compat::vasprintf (&buff, (const char*)fmt, args)>=0 && buff!=NULL) {
 #endif
 		try {
 			WideString a;

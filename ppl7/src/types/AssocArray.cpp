@@ -1620,7 +1620,7 @@ void AssocArray::exportBinary(void *buffer, size_t buffersize, size_t *realsize)
 	Iconv iconv(ICONV_UNICODE,"UTF-8");
 #endif
 	if (!buffer) buffersize=0;
-	if (p+7<buffersize) strncpy(ptr,"PPLASOC",7);
+	if (p+7<buffersize) memcpy(ptr,"PPLASOC",7);
 	p+=7;
 	AssocArray::const_iterator it;
 	for (it=Tree.begin();it!=Tree.end();++it) {

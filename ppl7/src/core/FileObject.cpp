@@ -322,7 +322,7 @@ size_t FileObject::read (ByteArray &target, size_t bytes)
 {
 	if (!bytes) throw IllegalArgumentException();
 	target.free();
-	target.malloc(bytes+4);
+	target.malloc(bytes);
 	return fread((void*)target.ptr(),1,bytes);
 }
 

@@ -500,7 +500,7 @@ String FileObject::md5()
 			bytes_read=fread(buffer,1,len);
 			MD5Update(&ctx,(const unsigned char *)buffer,bytes_read);
 		}
-	} catch (const ppl7::EndOfFileException) {
+	} catch (const ppl7::EndOfFileException &) {
 		// ignore
 	}
 	free(buffer);

@@ -60,14 +60,14 @@ void sighandler(int)
  */
 void help()
 {
-	printf ("Usage:\n"
-			"  -h           zeigt diese Hilfe an\n"
-			"  -s HOST:PORT Hostname oder IP und Port, an den sich der Echo-Server binden soll\n"
-			"  -n #         Anzahl Worker-Threads (Default=1)\n"
-			"  -q           quiet, es wird nichts auf stdout ausgegeben\n"
-			"  -p #         Groesse der Antwortpakete (Default=so gross wie eingehendes Paket)\n"
-			"  --noecho     Es werden keine Antworten zurueckgeschickt\n"
-			"\n");
+	printf("Usage:\n"
+		"  -h           zeigt diese Hilfe an\n"
+		"  -s HOST:PORT Hostname oder IP und Port, an den sich der Echo-Server binden soll\n"
+		"  -n #         Anzahl Worker-Threads (Default=1)\n"
+		"  -q           quiet, es wird nichts auf stdout ausgegeben\n"
+		"  -p #         Groesse der Antwortpakete (Default=so gross wie eingehendes Paket)\n"
+		"  --noecho     Es werden keine Antworten zurueckgeschickt\n"
+		"\n");
 
 }
 
@@ -76,7 +76,7 @@ void help()
  *
  * Gibt solange sekündlich eine Statusmeldung aus, bis das Programm gestoppt wird.
  */
-void run(UDPEchoBouncer &bouncer, bool quiet)
+void run(UDPEchoBouncer& bouncer, bool quiet)
 {
 	SystemStat stat_start;
 	SystemStat stat_end;
@@ -91,16 +91,16 @@ void run(UDPEchoBouncer &bouncer, bool quiet)
 				UDPEchoCounter counter=bouncer.getCounter();
 				sampleSensorData(stat_end);
 				printf("APP PKT RX: %8lu, TX: %8lu || NetIF RX: %8lu, TX: %8lu, ER: %8lu, DR: %8lu, MBit RX: %4lu, TX: %4lu || CPU: %0.2f\n",
-									counter.packets_received, counter.packets_send,
-									stat_end.net_total.receive.packets-stat_start.net_total.receive.packets,
-									stat_end.net_total.transmit.packets-stat_start.net_total.transmit.packets,
-									stat_end.net_total.receive.errs-stat_start.net_total.receive.errs +
-									stat_end.net_total.transmit.errs-stat_start.net_total.transmit.errs,
-									stat_end.net_total.receive.drop-stat_start.net_total.receive.drop+
-									stat_end.net_total.receive.drop-stat_start.net_total.receive.drop,
-									(stat_end.net_total.receive.bytes-stat_start.net_total.receive.bytes)>>17,
-									(stat_end.net_total.transmit.bytes-stat_start.net_total.transmit.bytes)>>17,
-									SystemStat::Cpu::getUsage(stat_end.cpu, stat_start.cpu)
+					counter.packets_received, counter.packets_send,
+					stat_end.net_total.receive.packets - stat_start.net_total.receive.packets,
+					stat_end.net_total.transmit.packets - stat_start.net_total.transmit.packets,
+					stat_end.net_total.receive.errs - stat_start.net_total.receive.errs +
+					stat_end.net_total.transmit.errs - stat_start.net_total.transmit.errs,
+					stat_end.net_total.receive.drop - stat_start.net_total.receive.drop +
+					stat_end.net_total.receive.drop - stat_start.net_total.receive.drop,
+					(stat_end.net_total.receive.bytes - stat_start.net_total.receive.bytes) >> 17,
+					(stat_end.net_total.transmit.bytes - stat_start.net_total.transmit.bytes) >> 17,
+					SystemStat::Cpu::getUsage(stat_end.cpu, stat_start.cpu)
 				);
 				stat_start=stat_end;
 				end += 1.0;
@@ -118,38 +118,39 @@ void run(UDPEchoBouncer &bouncer, bool quiet)
  * @param argv Liste mit char-Pointern auf die Kommandozeilenparameter
  * @return Gibt 0 zurück, wenn alles in Ordnung war, 1 wenn ein Fehler aufgetreten ist
  */
-int main (int argc, char **argv)
+int main(int argc, char** argv)
 {
-	if (ppl7::HaveArgv(argc,argv,"-h") || ppl7::HaveArgv(argc,argv,"--help")) {
+	if (ppl7::HaveArgv(argc, argv, "-h") || ppl7::HaveArgv(argc, argv, "--help")) {
 		help();
 		return 0;
 	}
-	ppl7::String Server=ppl7::GetArgv(argc,argv,"-s");
+	ppl7::String Server=ppl7::GetArgv(argc, argv, "-s");
 	if (Server.isEmpty()) {
 		help();
 		return 1;
 	}
-	ppl7::Array a(Server,":");
-	if (a.size()!=2) {
-		printf ("ERROR: Invalid Hostname:Port [%s]\n",(const char*)Server);
+	ppl7::Array a(Server, ":");
+	if (a.size() != 2) {
+		printf("ERROR: Invalid Hostname:Port [%s]\n", (const char*)Server);
 		return 1;
 	}
 	ppl7::String Hostname=a[0];
 	int Port=a[1].toInt();
 
 	UDPEchoBouncer bouncer;
+	printf("starting udpbouncer @ %s:%d\n", (const char*)Hostname, Port);
 	bouncer.setInterface(Hostname, Port);
 
 
-	bool quiet=ppl7::HaveArgv(argc,argv,"-q");
-	bouncer.disableResponses(ppl7::HaveArgv(argc,argv,"--noecho"));
-	int ThreadCount = ppl7::GetArgv(argc,argv,"-n").toInt();
+	bool quiet=ppl7::HaveArgv(argc, argv, "-q");
+	bouncer.disableResponses(ppl7::HaveArgv(argc, argv, "--noecho"));
+	int ThreadCount = ppl7::GetArgv(argc, argv, "-n").toInt();
 	if (!ThreadCount) ThreadCount=1;
 
-	size_t packetSize=ppl7::GetArgv(argc,argv,"-p").toInt();
-	if (packetSize>0) {
-		if (packetSize<32 || packetSize>4096) {
-			printf ("ERROR: Paketgroesse muss zwischen 32 und 4096 Bytes liegen [%d]\n",(int)packetSize);
+	size_t packetSize=ppl7::GetArgv(argc, argv, "-p").toInt();
+	if (packetSize > 0) {
+		if (packetSize < 32 || packetSize>4096) {
+			printf("ERROR: Paketgroesse muss zwischen 32 und 4096 Bytes liegen [%d]\n", (int)packetSize);
 			return 1;
 		}
 		bouncer.setFixedResponsePacketSize(packetSize);
@@ -168,5 +169,3 @@ int main (int argc, char **argv)
 		printf("Bouncer stopped\n");
 	return 0;
 }
-
-

@@ -1,14 +1,8 @@
 /*******************************************************************************
  * This file is part of "Patrick's Programming Library", Version 7 (PPL7).
  * Web: http://www.pfp.de/ppl/
- *
- * $Author$
- * $Revision$
- * $Date$
- * $Id$
- *
  *******************************************************************************
- * Copyright (c) 2013, Patrick Fedick <patrick@pfp.de>
+ * Copyright (c) 2022, Patrick Fedick <patrick@pfp.de>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,6 +26,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  *******************************************************************************/
 
+
 #ifndef PPL7EXCEPTIONS_H_
 #define PPL7EXCEPTIONS_H_
 #include <exception>
@@ -43,29 +38,29 @@ namespace ppl7 {
 
 class String;
 
-void throwExceptionFromErrno(int e,const String &info);
-void throwSocketException(int e,const String &info);
-void throwExceptionFromEaiError(int ecode, const String &info);
+void throwExceptionFromErrno(int e, const String& info);
+void throwSocketException(int e, const String& info);
+void throwExceptionFromEaiError(int ecode, const String& info);
 
 class Exception : std::exception
 {
-	private:
-		char *ErrorText;
-	public:
-        Exception() noexcept;
-        Exception(const Exception &other) noexcept;
-        Exception& operator= (const Exception &other) noexcept;
-        Exception(const char *msg, ...) noexcept;
-        virtual ~Exception() noexcept;
-        virtual const char* what() const noexcept;
-        const char* text() const noexcept;
-        String toString() const noexcept;
-		void print() const;
-        void copyText(const char *str) noexcept;
-        void copyText(const char *fmt, va_list args) noexcept;
+private:
+    char* ErrorText;
+public:
+    Exception() noexcept;
+    Exception(const Exception& other) noexcept;
+    Exception& operator= (const Exception& other) noexcept;
+    Exception(const char* msg, ...) noexcept;
+    virtual ~Exception() noexcept;
+    virtual const char* what() const noexcept;
+    const char* text() const noexcept;
+    String toString() const noexcept;
+    void print() const;
+    void copyText(const char* str) noexcept;
+    void copyText(const char* fmt, va_list args) noexcept;
 };
 
-std::ostream& operator<<(std::ostream& s, const Exception &e);
+std::ostream& operator<<(std::ostream& s, const Exception& e);
 
 
 #define STR_VALUE(arg)      #arg
@@ -155,7 +150,7 @@ PPL7EXCEPTION(SSLFailedToReadDHParams, Exception);
 
 //! @name IO-Exceptions
 //@{
-PPL7EXCEPTION(IOException,Exception);
+PPL7EXCEPTION(IOException, Exception);
 
 PPL7EXCEPTION(FileNotOpenException, IOException);
 PPL7EXCEPTION(FileSeekException, IOException);
@@ -230,11 +225,8 @@ PPL7EXCEPTION(UnrecoverableErrorException, IOException);			// WSANO_RECOVERY
 PPL7EXCEPTION(ObjectNotInSignaledStateException, IOException);		// WSA_IO_INCOMPLETE
 PPL7EXCEPTION(OverlappedOperationPendingException, IOException);	// WSA_IO_PENDING
 PPL7EXCEPTION(QoSException, IOException);							// Windows WSA_QOS_*
-
-
-
-
 PPL7EXCEPTION(BufferExceedsLimitException, IOException);
+PPL7EXCEPTION(CouldNotOpenDirectoryException, IOException);
 
 //@}
 

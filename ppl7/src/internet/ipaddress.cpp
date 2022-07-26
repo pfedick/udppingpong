@@ -214,6 +214,11 @@ IPAddress::IP_FAMILY IPAddress::family() const
 	return _family;
 }
 
+int IPAddress::version() const
+{
+	return (int)_family;
+}
+
 const void *IPAddress::addr() const
 {
 	if (_family==UNKNOWN) throw InvalidIpAddressException();

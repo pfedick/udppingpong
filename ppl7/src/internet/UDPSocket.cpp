@@ -276,13 +276,13 @@ static int out_bind(const char *host, int port)
 		host = NULL;
 
 	if (host != NULL && port > 0) {
-		char portstr[10];
+		char portstr[12];
 		sprintf(portstr, "%i", port);
 		n = getaddrinfo(host, portstr, &hints, &res);
 	} else if (host) {
 		n = getaddrinfo(host, NULL, &hints, &res);
 	} else if (port) {
-		char portstr[10];
+		char portstr[12];
 		sprintf(portstr, "%i", port);
 		n = getaddrinfo(NULL, portstr, &hints, &res);
 	} else {

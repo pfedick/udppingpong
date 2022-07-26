@@ -1,14 +1,8 @@
 /*******************************************************************************
  * This file is part of "Patrick's Programming Library", Version 7 (PPL7).
  * Web: http://www.pfp.de/ppl/
- *
- * $Author$
- * $Revision$
- * $Date$
- * $Id$
- *
  *******************************************************************************
- * Copyright (c) 2013, Patrick Fedick <patrick@pfp.de>
+ * Copyright (c) 2022, Patrick Fedick <patrick@pfp.de>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,10 +26,11 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  *******************************************************************************/
 
+
 namespace ppl7 {
 
 #ifdef _WIN32
-	int inet_aton(const char *cp, struct in_addr *pin);
+int inet_aton(const char* cp, struct in_addr* pin);
 #endif
 
 typedef struct tagPPLSocket {
@@ -45,7 +40,7 @@ typedef struct tagPPLSocket {
 	int sd;
 #endif
 	int proto;
-	char *ipname;
+	char* ipname;
 	int port;
 	//int addrlen;
 } PPLSOCKET;

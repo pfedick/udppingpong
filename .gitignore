@@ -1,4 +1,5 @@
 /.settings/
+/.vscode/
 /bots/
 /Makefile
 /config.log
@@ -9,3 +10,7 @@
 /pingpong_bouncer
 /pingpong_sender
 /distfiles/
+ppl7/include/stamp-*
+ppl7/include/ppl7-config.h
+ppl7/include/config_ppl7.h
+/*.gz

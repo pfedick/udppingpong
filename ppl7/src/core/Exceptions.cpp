@@ -90,6 +90,7 @@ Exception::Exception(const Exception &other) throw()
 
 Exception& Exception::operator= (const Exception &other) throw()
 {
+	if (ErrorText) free(ErrorText);
 	if (other.ErrorText) {
 		ErrorText=strdup(other.ErrorText);
 	} else {

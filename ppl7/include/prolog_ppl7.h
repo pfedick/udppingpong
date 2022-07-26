@@ -1,15 +1,8 @@
-
 /*******************************************************************************
  * This file is part of "Patrick's Programming Library", Version 7 (PPL7).
  * Web: http://www.pfp.de/ppl/
- *
- * $Author$
- * $Revision$
- * $Date$
- * $Id$
- *
  *******************************************************************************
- * Copyright (c) 2013, Patrick Fedick <patrick@pfp.de>
+ * Copyright (c) 2022, Patrick Fedick <patrick@pfp.de>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,23 +25,24 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *******************************************************************************/
+
 #ifndef _GNU_SOURCE
 #define  _GNU_SOURCE
 #endif
 
 #ifndef _PPL7_CONFIG
-	#ifdef PPL7LIB
-		#ifdef HAVE_CONFIG_H
-			#include "config_ppl7.h"
-		#else
-			#ifdef PPLVISUALC
-				#include "ppl7-visualc-config.h"
-			#elif defined _WIN32
-				#include "ppl7-config.h"
-			#endif
-		#endif
-	#else
-		#include <ppl7-config.h>
-	#endif
+#ifdef PPL7LIB
+#ifdef HAVE_CONFIG_H
+#include "config_ppl7.h"
+#else
+#ifdef PPLVISUALC
+#include "ppl7-visualc-config.h"
+#elif defined _WIN32
+#include "ppl7-config.h"
+#endif
+#endif
+#else
+#include <ppl7-config.h>
+#endif
 #endif
 #include "compat_ppl7.h"
