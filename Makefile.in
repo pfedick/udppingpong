@@ -1,4 +1,4 @@
-EXTRA_CFLAGS = 
+EXTRA_CFLAGS =
 INCLUDE	= -I. -Iinclude -Ippl7/include
 CXXFLAGS	= @CXXFLAGS@
 CXX			= @CXX@
@@ -14,7 +14,7 @@ TARGETBIN	?= @bindir@
 
 OBJECTS_SENDER = build/UDPEchoSenderThread.o build/UDPEchoReceiverThread.o build/SampleSensorData.o \
 	build/UDPEchoCounter.o build/sender.o
-	
+
 OBJECTS_BOUNCER = build/UDPEchoBouncer.o build/UDPEchoBouncerThread.o build/UDPEchoCounter.o build/SampleSensorData.o \
 	build/bouncer.o
 
@@ -32,6 +32,38 @@ uninstall:
 clean:
 	rm -rf ppl7/release
 	rm -rf build
+
+docker: docker_build docker_start
+
+docker_build:
+	docker build -t udppingpong:latest -f Dockerfile .
+
+docker_save:
+	docker save udppingpong:latest | gzip > udppingpong.container.tar.gz
+
+docker_logs:
+	docker logs udppingpong
+
+docker_start:
+	- @docker stop udppingpong > /dev/null 2>&1 || echo -n ""
+	- @docker rm udppingpong
+	docker run --ulimit nofile=10000:10000 -p 53:9053 -d --net=host \
+		--name udppingpong udppingpong:latest
+	@echo "udppingpong container started"
+
+docker_start_fg:
+	- @docker stop udppingpong > /dev/null 2>&1 || echo -n ""
+	- @docker rm udppingpong
+	docker run --ulimit nofile=10000:10000 -p 53:9053 -t -i --net=host \
+		--name udppingpong udppingpong:latest
+
+docker_stop:
+	- @docker stop udppingpong > /dev/null 2>&1 || echo -n ""
+	- @docker rm udppingpong
+	@echo "udppingpong container started"
+
+
+
 
 ppl7/release/libppl7.a: ppl7/Makefile
 	cd ppl7; $(MAKE) release/libppl7.a
@@ -58,15 +90,15 @@ build/UDPEchoBouncer.o: src/UDPEchoBouncer.cpp Makefile include/udpecho.h
 build/UDPEchoBouncerThread.o: src/UDPEchoBouncerThread.cpp Makefile include/udpecho.h
 	mkdir -p build
 	$(CXX) $(CFLAGS) -o build/UDPEchoBouncerThread.o -c src/UDPEchoBouncerThread.cpp
-	
+
 build/UDPEchoCounter.o: src/UDPEchoCounter.cpp Makefile include/udpecho.h
 	mkdir -p build
 	$(CXX) $(CFLAGS) -o build/UDPEchoCounter.o -c src/UDPEchoCounter.cpp
-	
+
 build/UDPEchoSenderThread.o: src/UDPEchoSenderThread.cpp Makefile include/sender.h
 	mkdir -p build
 	$(CXX) $(CFLAGS) -o build/UDPEchoSenderThread.o -c src/UDPEchoSenderThread.cpp
-	
+
 build/UDPEchoReceiverThread.o: src/UDPEchoReceiverThread.cpp Makefile include/udpecho.h
 	mkdir -p build
 	$(CXX) $(CFLAGS) -o build/UDPEchoReceiverThread.o -c src/UDPEchoReceiverThread.cpp
@@ -74,4 +106,3 @@ build/UDPEchoReceiverThread.o: src/UDPEchoReceiverThread.cpp Makefile include/ud
 build/SampleSensorData.o: src/SampleSensorData.cpp Makefile include/udpecho.h
 	mkdir -p build
 	$(CXX) $(CFLAGS) -o build/SampleSensorData.o -c src/SampleSensorData.cpp
-	
